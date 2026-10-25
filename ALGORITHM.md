@@ -103,3 +103,22 @@ The exact rounding and indexing rules will be finalized and tested during implem
 After processing all rows, the algorithm returns E.
 
 The process is repeated for every plane in the CSV file. The resulting images are then converted into frames of the output MP4 video.
+
+## 5. NRRD Data
+
+The input volume will be loaded from an NRRD file.
+
+We plan to use Python and the pynrrd library to read the file.
+
+After loading the data, the program will check:
+
+- The volume has three dimensions.
+- The dimensions are within the limits given in the assignment.
+- The voxel data type is supported (unsigned 8, 16, or 32 bits).
+- The volume can be accessed using the expected coordinate order.
+
+The loaded data will be stored in the 3D matrix M.
+
+The algorithm will use M to sample voxel values and create the output images.
+
+We will test the program first with a small synthetic volume and then with a real NRRD dataset.
