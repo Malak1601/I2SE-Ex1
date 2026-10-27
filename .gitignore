@@ -1,0 +1,7 @@
+.venv/
+.venv-ex1/
+__pycache__/
+*.pyc
+output.mp4
+preview.mp4
+ALGORITHM_LOCAL_BACKUP.md
