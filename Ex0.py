@@ -195,11 +195,16 @@ def validate_trapezoid(a, b, c, d):
     bottom_len = float(np.linalg.norm(bottom))
 
     if min(leg, right_leg, top_len, bottom_len) <= EPS:
-        raise ValueError("Trapezoid edges must be nonzero")
-
-    if not math.isclose(
-        leg, right_leg, rel_tol=1e-7, abs_tol=EPS
-    ):
+        raise ValueError("Trapezoid edges must be nonzero") 
+        
+if abs(leg - right_leg) >= LENGTH_TOLERANCE:
+    raise ValueError(
+        "Trapezoid legs must have approximately equal lengths"
+    )
+    if top_len > bottom_len:
+    raise ValueError(
+        "Trapezoid starting base must not be longer than ending base"
+    )
         raise ValueError("Trapezoid legs must be equal")
 
     if np.linalg.norm(np.cross(top, bottom)) > (
