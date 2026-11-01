@@ -20,3 +20,32 @@ The project includes:
 - Testing the correctness and performance of the implementation.
 
 The project focuses on the projection algorithm and its performance rather than building a graphical user interface.
+
+## Performance Experiment
+
+The performance of the triangle projection algorithm was measured using a 3D volume of size 500 × 500 × 500.
+
+The benchmark used an isosceles triangle with the following vertices:
+
+- A = (0, 0, 0)
+- B = (400, 0, 0)
+- C = (0, 400, 0)
+
+The projection was executed 10 times, after one warm-up run. Execution time was measured using `time.perf_counter()`.
+
+### Results
+
+| Metric | Result |
+|---|---|
+| Volume dimensions | 500 × 500 × 500 |
+| Number of measured projections | 10 |
+| Average processing time per projection | 0.0223 seconds |
+| Projection processing speed | 44.84 FPS |
+| Minimum required speed | 30 FPS |
+| Expected performance target | 100 FPS |
+
+### Conclusion
+
+The measured processing speed was 44.84 FPS, exceeding the minimum requirement of 30 FPS but remaining below the expected target of 100 FPS.
+
+These results apply to the tested triangle configuration and execution environment. They do not guarantee the same performance for every possible input.
