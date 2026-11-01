@@ -109,6 +109,8 @@ The validation checks include:
 - Parallel bases.
 - Coplanarity of the four vertices.
 - Valid vertex ordering.
+- Rejection of intersecting trapezoid legs.
+- Consistent base directions for the supported vertex ordering.
 
 The algorithm advances along the two equal legs and samples each segment connecting their current positions.
 
@@ -174,11 +176,11 @@ Let H be the number of output rows and W the maximum number of sampling position
 
 The projection requires O(H × W) sampling work for one region.
 
-The output image requires O(H × W) memory.
+The output image requires O(H × W) memory, excluding the input volume and video-encoding buffers.
 
 A performance benchmark was conducted using a 500 × 500 × 500 volume and 10 measured triangle projections after one warm-up run.
 
-The measured average processing time was approximately 0.0223 seconds per projection, corresponding to 44.84 FPS.
+The latest measured processing speed was 43.87 FPS, corresponding to approximately 0.0228 seconds per projection.
 
 This result exceeds the minimum requirement of 30 FPS but remains below the expected target of 100 FPS.
 
