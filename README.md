@@ -21,6 +21,70 @@ The project includes:
 
 The project focuses on the projection algorithm and its performance rather than building a graphical user interface.
 
+## Requirements
+
+- Python 3
+- NumPy
+- pynrrd
+- imageio
+- imageio-ffmpeg
+
+Install the required libraries using:
+
+```bash
+python3 -m pip install numpy pynrrd imageio imageio-ffmpeg
+```
+
+## How to Run
+
+Run the program using:
+
+```bash
+python3 Ex0.py file.nrrd file.csv file.mp4
+```
+
+The arguments are:
+
+- `file.nrrd`: Input 3D volume.
+- `file.csv`: CSV file containing the triangle or trapezoid coordinates.
+- `file.mp4`: Output video file.
+
+Each CSV row contains 9 values for a triangle or 12 values for a trapezoid. Each group of three values represents a 3D point.
+
+To run the included example:
+
+```bash
+python3 Ex0.py test.nrrd test.csv output.mp4
+```
+
+## Testing
+
+The project includes basic projection tests and additional tests for valid and invalid inputs.
+
+Run the basic tests:
+
+```bash
+python3 Ex0.py --test
+```
+
+Run the additional tests:
+
+```bash
+python3 test_extra.py
+```
+
+The additional tests cover constant volume data, sampling outside the volume, invalid triangles, and invalid trapezoids.
+
+## Performance Benchmark
+
+Run the performance test:
+
+```bash
+python3 Ex0.py --performance
+```
+
+The benchmark measures the processing speed of the triangle projection algorithm on a 500 × 500 × 500 volume.
+
 ## Performance Experiment
 
 The performance of the triangle projection algorithm was measured using a 3D volume of size 500 × 500 × 500.
