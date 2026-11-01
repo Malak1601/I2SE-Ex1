@@ -8,6 +8,7 @@ import nrrd
 import numpy as np
 
 EPS = 1e-8
+LENGTH_TOLERANCE = 0.001
 
 
 def distance(p1, p2):
@@ -149,11 +150,13 @@ def project_triangle(M, a, b, c):
     dab = distance(a, b)
     dac = distance(a, c)
 
-    if dab <= EPS or not math.isclose(
-        dab, dac, rel_tol=1e-7, abs_tol=EPS
+    if (
+        dab <= EPS
+        or dac <= EPS
+        or abs(dab - dac) >= LENGTH_TOLERANCE
     ):
         raise ValueError(
-            "Triangle must have two equal nonzero sides from a"
+            "Triangle must have two approximately equal nonzero sides"
         )
 
     ab = np.subtract(b, a)
@@ -171,6 +174,7 @@ def project_triangle(M, a, b, c):
         dab,
         distance(b, c)
     )
+
 
 
 
