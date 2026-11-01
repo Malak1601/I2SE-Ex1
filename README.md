@@ -113,3 +113,50 @@ The projection was executed 10 times, after one warm-up run. Execution time was 
 The measured processing speed was 44.84 FPS, exceeding the minimum requirement of 30 FPS but remaining below the expected target of 100 FPS.
 
 These results apply to the tested triangle configuration and execution environment. They do not guarantee the same performance for every possible input.
+
+## Dataset
+
+The repository includes `test.nrrd`, a small synthetic 3D volume used to verify the projection algorithm.
+
+The file `test.csv` contains example triangle and trapezoid coordinates used to generate the output frames.
+
+A separate synthetic volume of size 500 × 500 × 500 was used for the performance benchmark.
+
+## Testing Strategy
+
+The implementation was tested using:
+
+- Basic triangle and trapezoid projection tests with expected output values.
+- A constant-volume test.
+- Sampling outside the volume boundaries.
+- Invalid triangle and trapezoid inputs.
+- A crossed-trapezoid regression test.
+- A performance benchmark using 10 measured projections after one warm-up run.
+
+The basic and additional tests passed.
+
+To run the tests:
+
+```bash
+python3 Ex0.py --test
+python3 test_extra.py
+```
+
+## Demo and Experiment Output
+
+To reproduce the example:
+
+```bash
+python3 Ex0.py test.nrrd test.csv output.mp4
+```
+
+The program reads the 3D volume and the coordinates from the CSV file, generates one projection per region, and saves the resulting frames in CSV order.
+
+The repository includes:
+
+- `output.mp4` — the generated projection video.
+- `output_large_preview.mp4` — an enlarged preview for easier viewing.
+
+The latest performance measurement was 43.87 FPS on a 500 × 500 × 500 synthetic volume, exceeding the minimum requirement of 30 FPS. The earlier measurement was 44.84 FPS.
+
+The performance results measure projection processing rather than total file-loading and video-encoding time.
