@@ -1,29 +1,35 @@
 # I2SE-Ex1
 
-3D Medical Volume Plane Projection
+## 3D Medical Volume Plane Projection
 
-## Problem Statement
+### Problem Statement
 
-The goal of this project is to extract a 2D image from a 3D volume, such as an MRI scan.
+This project focuses on extracting 2D images from 3D volumetric data, such as MRI scans.
 
-The input is a 3D matrix containing voxel values and a plane defined by three or four points. The program uses these points to sample values from the volume and generate the corresponding 2D image.
+The input consists of a 3D matrix containing voxel values and a set of planes defined by three or four points. For each plane, the program calculates the corresponding positions in the volume, samples the voxel values, and creates a 2D image.
 
-## Project Scope
+The main goal is to implement a correct and efficient projection algorithm that can handle different plane orientations and input conditions.
+
+### Project Scope
 
 The project includes:
 
 - Reading 3D volume data from NRRD files.
 - Reading plane coordinates from a CSV file.
-- Generating a 2D image for each plane using the projection algorithm.
-- Supporting the triangle and trapezoid cases described in the assignment.
-- Saving the generated images as frames in an MP4 video.
+- Supporting triangle and trapezoid plane definitions.
+- Checking the validity of the input plane coordinates.
+- Generating 2D images using the projection algorithm.
+- Using zero for sampling positions outside the volume.
+- Handling invalid plane definitions without interrupting the processing of valid planes.
+- Combining the generated frames into an MP4 video.
 - Testing the correctness and performance of the implementation.
 
-The project focuses on the projection algorithm and its performance rather than building a graphical user interface.
+The main focus is on the projection algorithm, its efficiency, and the reliability of the implementation. A graphical user interface is not part of this project.
 
-## Requirements
+### Requirements
 
-- Python 3
+The project uses Python 3 and the following libraries:
+
 - NumPy
 - pynrrd
 - imageio
@@ -35,9 +41,9 @@ Install the required libraries using:
 python3 -m pip install numpy pynrrd imageio imageio-ffmpeg
 ```
 
-## How to Run
+### How to Run
 
-Run the program using:
+Run the program from the command line:
 
 ```bash
 python3 Ex0.py file.nrrd file.csv file.mp4
@@ -45,11 +51,11 @@ python3 Ex0.py file.nrrd file.csv file.mp4
 
 The arguments are:
 
-- `file.nrrd`: Input 3D volume.
-- `file.csv`: CSV file containing the triangle or trapezoid coordinates.
-- `file.mp4`: Output video file.
+- `file.nrrd` - The input 3D volume.
+- `file.csv` - A CSV file containing the plane coordinates.
+- `file.mp4` - The output video file.
 
-Each CSV row contains 9 values for a triangle or 12 values for a trapezoid. Each group of three values represents a 3D point.
+Each CSV row contains either 9 values for a triangle or 12 values for a trapezoid. Every three consecutive values represent a point in 3D space.
 
 To run the included example:
 
@@ -57,9 +63,11 @@ To run the included example:
 python3 Ex0.py test.nrrd test.csv output.mp4
 ```
 
-## Testing
+The program processes the plane definitions in CSV order and generates a corresponding video frame for each one.
 
-The project includes basic projection tests and additional tests for valid and invalid inputs.
+### Testing
+
+The project contains basic projection tests and additional tests for different input conditions.
 
 Run the basic tests:
 
@@ -73,90 +81,83 @@ Run the additional tests:
 python3 test_extra.py
 ```
 
-The additional tests cover constant volume data, sampling outside the volume, invalid triangles, and invalid trapezoids.
+The tests cover:
 
-## Performance Benchmark
+- Triangle and trapezoid projections.
+- Expected output values.
+- Constant volume data.
+- Sampling outside the volume boundaries.
+- Invalid triangle definitions.
+- Invalid trapezoid definitions.
+- Crossed-trapezoid regression cases.
 
-Run the performance test:
+The tests are intended to verify the correctness of the calculations and the handling of invalid inputs.
 
-```bash
-python3 Ex0.py --performance
-```
+### Performance Experiment
 
-The benchmark measures the processing speed of the triangle projection algorithm on a 500 × 500 × 500 volume.
+A performance benchmark was used to measure the processing speed of the triangle projection algorithm.
 
-## Performance Experiment
+The experiment used a synthetic 3D volume with dimensions of 500 × 500 × 500.
 
-The performance of the triangle projection algorithm was measured using a 3D volume of size 500 × 500 × 500.
-
-The benchmark used an isosceles triangle with the following vertices:
+The triangle was defined by the following points:
 
 - A = (0, 0, 0)
 - B = (400, 0, 0)
 - C = (0, 400, 0)
 
-The projection was executed 10 times, after one warm-up run. Execution time was measured using `time.perf_counter()`.
+The algorithm was executed once as a warm-up, followed by 10 measured runs. Execution time was measured using `time.perf_counter()`.
 
-### Results
+Run the benchmark using:
+
+```bash
+python3 Ex0.py --performance
+```
+
+#### Results
 
 | Metric | Result |
 |---|---|
 | Volume dimensions | 500 × 500 × 500 |
-| Number of measured projections | 10 |
-| Average processing time per projection | 0.0223 seconds |
-| Projection processing speed | 44.84 FPS |
+| Measured runs | 10 |
+| Latest reported processing speed | 43.87 FPS |
 | Minimum required speed | 30 FPS |
 | Expected performance target | 100 FPS |
 
-### Conclusion
+The reported speed exceeds the minimum requirement of 30 FPS but remains below the expected target of 100 FPS.
 
-The measured processing speed was 44.84 FPS, exceeding the minimum requirement of 30 FPS but remaining below the expected target of 100 FPS.
+The benchmark measures projection processing time, excluding file loading and video encoding.
 
-These results apply to the tested triangle configuration and execution environment. They do not guarantee the same performance for every possible input.
+These results are specific to the tested triangle and execution environment. Other plane configurations may produce different processing times.
 
-## Dataset
+### Dataset
 
-The repository includes `test.nrrd`, a small synthetic 3D volume used to verify the projection algorithm.
+The repository includes `test.nrrd`, a small synthetic volume used for testing the projection algorithm.
 
-The file `test.csv` contains example triangle and trapezoid coordinates used to generate the output frames.
+The `test.csv` file contains sample triangle and trapezoid coordinates.
 
-A separate synthetic volume of size 500 × 500 × 500 was used for the performance benchmark.
+A separate synthetic volume of size 500 × 500 × 500 was used for performance measurements.
 
-## Testing Strategy
+### Demo and Output
 
-The implementation was tested using:
-
-- Basic triangle and trapezoid projection tests with expected output values.
-- A constant-volume test.
-- Sampling outside the volume boundaries.
-- Invalid triangle and trapezoid inputs.
-- A crossed-trapezoid regression test.
-- A performance benchmark using 10 measured projections after one warm-up run.
-
-The basic and additional tests passed.
-
-To run the tests:
-
-```bash
-python3 Ex0.py --test
-python3 test_extra.py
-```
-
-## Demo and Experiment Output
-
-To reproduce the example:
+The demo can be executed using:
 
 ```bash
 python3 Ex0.py test.nrrd test.csv output.mp4
 ```
 
-The program reads the 3D volume and the coordinates from the CSV file, generates one projection per region, and saves the resulting frames in CSV order.
+The program reads the volume and plane coordinates, computes the projections, and saves them as video frames in the same order as the CSV entries.
 
-The repository includes:
+The repository contains:
 
-- `output.mp4` — the generated projection video.
-- `output_large_preview.mp4` — an enlarged preview for easier viewing.
+- `output.mp4` - The generated projection video.
+- `output_large_preview.mp4` - An enlarged version for easier viewing.
 
-The latest performance measurement was 43.87 FPS on a 500 × 500 × 500 synthetic volume, exceeding the minimum requirement of 30 FPS. The earlier measurement was 44.84 FPS.
+### Project Files
 
-The performance results measure projection processing rather than total file-loading and video-encoding time.
+- `Ex0.py` - Main Python implementation.
+- `test_extra.py` - Additional tests.
+- `test.nrrd` - Sample volume data.
+- `test.csv` - Sample plane definitions.
+- `SRS.md` - Software requirements specification.
+- `ALGORITHM.md` - Algorithm design and explanation.
+- `README.md` - Project overview and instructions.
