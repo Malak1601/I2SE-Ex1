@@ -173,6 +173,7 @@ def project_triangle(M, a, b, c):
     )
 
 
+
 def validate_trapezoid(a, b, c, d):
     a, b, c, d = [
         np.asarray(point, dtype=float)
@@ -216,16 +217,45 @@ def validate_trapezoid(a, b, c, d):
 
     n = normal / normal_length
 
-    signed_b = float(
-        np.dot(np.cross(top, b - a), n)
-    )
-
-    signed_c = float(
-        np.dot(np.cross(top, c - a), n)
-    )
+    signed_b = float(np.dot(np.cross(top, b - a), n))
+    signed_c = float(np.dot(np.cross(top, c - a), n))
 
     if signed_b <= EPS or signed_c <= EPS:
         raise ValueError("Invalid trapezoid vertex order")
+
+    # Check that the two legs do not cross.
+    # Project the points to the trapezoid's 2D plane.
+    u = top / top_len
+    v = np.cross(n, u)
+
+    def to_2d(point):
+        delta = point - a
+        return np.array([
+            np.dot(delta, u),
+            np.dot(delta, v)
+        ])
+
+    A, B, C, D = [to_2d(p) for p in (a, b, c, d)]
+
+    def orientation(p, q, r):
+        return (
+            (q[0] - p[0]) * (r[1] - p[1])
+            - (q[1] - p[1]) * (r[0] - p[0])
+        )
+
+    # The legs are A-B and D-C.
+    o1 = orientation(A, B, D)
+    o2 = orientation(A, B, C)
+    o3 = orientation(D, C, A)
+    o4 = orientation(D, C, B)
+
+    if o1 * o2 < 0 and o3 * o4 < 0:
+        raise ValueError("Trapezoid legs must not cross")
+
+    # Both bases must face the same direction
+    # for the required vertex ordering.
+    if float(np.dot(top, bottom)) <= EPS * top_len * bottom_len:
+        raise ValueError("Invalid trapezoid base direction")
 
     return leg, max(top_len, bottom_len)
 

@@ -56,6 +56,26 @@ def test_extra():
 
     print("All extra tests passed")
 
+def test_crossed_trapezoid():
+    from Ex0 import validate_trapezoid
+
+    try:
+        validate_trapezoid(
+            (0, 0, 0),
+            (2, 2, 0),
+            (0, 2, 0),
+            (2, 0, 0)
+        )
+    except ValueError:
+        print("Crossed trapezoid test passed")
+    else:
+        raise AssertionError(
+            "Crossed trapezoid should be rejected"
+        )
 
 if __name__ == "__main__":
     test_extra()
+
+if __name__ == "__main__":
+    test_extra()
+    test_crossed_trapezoid()
