@@ -2,186 +2,342 @@
 
 ## 1. Overview
 
-The goal of this project is to extract 2D images from a 3D volume.
+The goal of this project is to generate 2D images from a 3D volume, such as an MRI scan.
 
-The input consists of a 3D matrix M and a list of regions defined by three or four 3D points. Each region represents an isosceles triangle or an isosceles trapezoid.
+The input consists of a 3D matrix M and a list of regions defined by three or four points in 3D space. Each region represents an isosceles triangle or an isosceles trapezoid.
 
 The algorithm calculates sampling positions within each region, reads the corresponding voxel values from M, and stores them in a 2D matrix E.
 
-Each region produces one image. The images are then saved as frames in an MP4 video.
+Each valid region produces a projection image. The resulting images are converted into frames and saved as an MP4 video.
+
+The implementation uses NumPy to process multiple sampling positions together and reduce the number of Python-level operations.
 
 ## 2. Input and Output
 
-**Input:**
-- A 3D volume stored in an NRRD file.
-- A CSV file containing the coordinates of the triangle or trapezoid regions.
+### Input
 
-**Output:**
-- A 2D matrix E for each region.
-- An MP4 video containing one frame per region, in the same order as the CSV file.
+- An NRRD file containing a 3D volume M.
+- A CSV file containing triangle or trapezoid coordinates.
 
-## 3. Main Steps
+Each CSV row contains either 9 values for three points or 12 values for four points.
+
+### Output
+
+- A 2D matrix E for each valid region.
+- An MP4 video containing the generated frames in CSV order.
+
+According to the assignment, invalid plane definitions must produce error frames while allowing subsequent valid planes to be processed.
+
+## 3. Main Algorithm
+
+The processing steps are:
 
 1. Load the 3D volume from the NRRD file.
 2. Validate the volume dimensions and data type.
-3. Read the region coordinates from the CSV file.
-4. Validate each triangle or trapezoid.
-5. Calculate the distances and normalized direction vectors.
-6. Create an initially zero-filled 2D output matrix E.
-7. Move along the region row by row and sample values from M.
-8. Store the sampled values in E.
-9. Repeat for all regions.
-10. Convert the resulting images into MP4 frames and save the video.
+3. Read the plane coordinates from the CSV file.
+4. Identify each region as a triangle or trapezoid.
+5. Validate its geometric conditions.
+6. Calculate distances and normalized direction vectors.
+7. Create a zero-filled output matrix E.
+8. Calculate the sampling positions row by row.
+9. Find the nearest voxel for each sampling position.
+10. Store valid sampled values in E.
+11. Convert the generated images into video frames.
+12. Save the frames in an MP4 video.
 
-## 4. Detailed Algorithm
+The demo must also handle invalid planes by generating error frames and continuing with the remaining entries.
+
+## 4. Triangle Projection
 
 ### 4.1 Triangle Definition
 
-A triangle is defined by three 3D points: a, b, and c.
+A triangle is defined by three points:
 
-The triangle must satisfy:
+- a = (ax, ay, az)
+- b = (bx, by, bz)
+- c = (cx, cy, cz)
+
+The two sides starting at a must have approximately equal lengths.
+
+Let:
 
 - Dab = distance(a, b)
 - Dac = distance(a, c)
 - Dbc = distance(b, c)
-- Dab ≈ Dac
 
-The implementation checks that the two equal sides have nonzero lengths and are equal within a small numerical tolerance. Collinear points are rejected.
+The required condition is:
+
+`abs(Dab - Dac) < 0.001`
+
+The triangle must also have nonzero side lengths and must not be degenerate.
+
+A triangle with collinear points is rejected because it does not define a valid triangular region.
 
 ### 4.2 Direction Vectors
 
-The normalized direction vectors are:
+The normalized vectors along the two equal sides are:
 
-- vab = (b - a) / Dab
-- vac = (c - a) / Dac
+`vab = (b - a) / Dab`
 
-These vectors define unit-length directions along the two equal sides of the triangle.
+`vac = (c - a) / Dac`
+
+These vectors have length one and define the directions used to move from a toward b and c.
 
 ### 4.3 Output Matrix
 
-The implementation creates an initially zero-filled 2D matrix E with the same data type as the input volume.
+The output matrix E is initialized with zeros and uses the same data type as M.
 
-The output dimensions are:
+The implementation calculates its dimensions using:
 
-- height = max(1, ceil(leg_length))
-- width = max(1, ceil(max_width) + 1)
+`height = max(1, ceil(Dab))`
 
-For each row y, the sampling step is:
+`width = max(1, ceil(Dbc) + 1)`
 
-`step = min(y + 1, leg_length)`
+The width is based on the longest sampling segment, while the height is based on the length of the equal sides.
 
-The two endpoints of the row are calculated as:
+The extra width position accounts for the sampling offsets that include both ends of a segment.
 
-- p1 = start1 + step × vector1
-- p2 = start2 + step × vector2
+### 4.4 Row Calculation
 
-### 4.4 Triangle Sampling
+The algorithm processes the output matrix one row at a time.
 
-For a triangle:
+For each row index y:
 
-- start1 = a
-- start2 = a
-- vector1 = vab
-- vector2 = vac
-- leg_length = Dab
-- max_width = Dbc
+`step = min(y + 1, Dab)`
 
-For each output row:
+The two endpoints are:
 
-1. Calculate the two endpoints p1 and p2 along the equal sides.
-2. Calculate `span`, the distance between p1 and p2.
-3. Determine the sampling direction from p1 to p2.
-4. Generate sampling positions along the segment.
-5. Convert the positions to voxel indices.
-6. Calculate the centered horizontal output positions.
-7. Copy valid voxel values into E.
+`p1 = a + step * vab`
 
-### 4.5 Trapezoid Sampling
+`p2 = a + step * vac`
 
-The algorithm also supports isosceles trapezoids defined by four 3D points.
+The distance between them is:
 
-For the implemented vertex ordering a, b, c, d, the equal legs are a→b and d→c.
+`span = distance(p1, p2)`
 
-The validation checks include:
+This segment represents the part of the triangle sampled for the current output row.
 
-- Nonzero edge lengths.
-- Equal leg lengths.
-- Parallel bases.
-- Coplanarity of the four vertices.
-- Valid vertex ordering.
-- Rejection of intersecting trapezoid legs.
-- Consistent base directions for the supported vertex ordering.
+The implementation starts with step = 1, so the first stored row is sampled one unit away from vertex a. The vertex itself is not stored as a separate initial row.
 
-The algorithm advances along the two equal legs and samples each segment connecting their current positions.
+### 4.5 Sampling Along a Row
 
-Unlike the triangle case, the starting segment of a trapezoid may have a nonzero width.
+For each row, the algorithm:
 
-### 4.6 Sampling Rules and Special Cases
+1. Calculates the distance between p1 and p2.
+2. Finds the normalized direction from p1 to p2.
+3. Generates sampling offsets along the segment.
+4. Converts the sampled coordinates into voxel indices.
+5. Calculates the horizontal positions in E.
+6. Copies values from valid volume positions into E.
 
-The implementation generates sampling positions along each row using NumPy arrays.
-
-For a row of length `span`, it calculates:
+The number of sampling intervals is calculated using:
 
 `count = ceil(span)`
 
-Sampling offsets are generated from zero to `count` and limited to the segment length.
+The offsets are generated from 0 to count and limited to the segment length.
 
-Fractional 3D coordinates are converted to voxel indices using nearest-neighbor sampling:
+The sampled points are:
 
-`index = floor(coordinate + 0.5)`
+`point = p1 + offset * direction`
 
-Horizontal output positions are calculated using the centering formula from the assignment:
+The horizontal output positions are calculated using:
 
 `x = (max_width - span) / 2 + offset`
 
-The resulting positions are rounded using `np.rint`.
+The implementation rounds these positions to integer column indices.
 
-Samples outside the input volume are excluded from indexed reads. Their output positions remain zero unless another valid sample writes to the same output position.
+The centering calculation places shorter segments near the middle of the output image.
 
-Zero-length sampling segments are handled separately to avoid division by zero.
+## 5. Trapezoid Projection
 
-NumPy vectorization is used to process the sampling positions of each row without a Python loop over individual samples.
+### 5.1 Trapezoid Definition
 
-### 4.7 Result
+The implementation uses four points:
 
-After processing all rows, the algorithm returns E.
+- a
+- b
+- c
+- d
 
-The process is repeated for every region in the CSV file.
+The equal legs are:
 
-## 5. NRRD Data
+- a → b
+- d → c
 
-The implementation uses Python and the pynrrd library to load the input volume.
+The bases are:
 
-After loading the data, the program checks:
+- a → d
+- b → c
 
-- The volume has exactly three dimensions.
+For the supported trapezoid definition, the two legs must have approximately equal lengths.
+
+The required distance condition is:
+
+`abs(distance(a,b) - distance(d,c)) < 0.001`
+
+The starting base must not be longer than the ending base:
+
+`distance(a,d) <= distance(b,c)`
+
+The trapezoid must also be planar and non-degenerate.
+
+The validation design includes checking that the bases are parallel, the vertices have a valid order, and the shape is not self-intersecting.
+
+### 5.2 Trapezoid Sampling
+
+The trapezoid uses the same row-sampling function as the triangle.
+
+The parameters are:
+
+- start1 = a
+- start2 = d
+- vector1 = direction(a,b)
+- vector2 = direction(d,c)
+- leg_length = distance(a,b)
+- max_width = max(distance(a,d), distance(b,c))
+
+For each row:
+
+`p1 = a + step * vector1`
+
+`p2 = d + step * vector2`
+
+The segment between p1 and p2 is sampled using the same procedure as the triangle.
+
+The main difference is that a trapezoid starts with a nonzero distance between its two sides.
+
+## 6. Nearest-Neighbor Sampling
+
+The algorithm uses nearest-neighbor sampling to obtain values from the 3D matrix.
+
+Each coordinate is converted to an integer index using:
+
+`index = floor(coordinate + 0.5)`
+
+This selects the nearest integer voxel coordinate, with half-integer values rounded upward.
+
+For each sampled point, the algorithm checks:
+
+`0 <= x < sx`
+
+`0 <= y < sy`
+
+`0 <= z < sz`
+
+If all three indices are inside the volume, the voxel value is copied into E.
+
+If the point is outside the volume, the output position remains zero.
+
+The output column indices are rounded separately using `np.rint`.
+
+Since multiple sampling positions may map to the same output column, a later sample may overwrite an earlier value.
+
+### Zero-Length Segments
+
+If the distance between p1 and p2 is close to zero, the algorithm avoids division by zero.
+
+It samples p1 directly and places the result near the center of the output row.
+
+### NumPy Vectorization
+
+Instead of using a Python loop for every pixel, the implementation generates the sampling positions of an entire row using NumPy arrays.
+
+It then converts the positions into integer indices and reads the valid voxel values together.
+
+This reduces Python-level loop overhead and supports more efficient processing.
+
+## 7. NRRD Data Handling
+
+The program uses the pynrrd library to load the volume.
+
+After loading, it checks that:
+
+- The matrix has exactly three dimensions.
 - Each dimension is between 1 and 1023.
-- The voxel data type is an unsigned 8-bit, 16-bit, or 32-bit integer.
+- The voxel values are unsigned 8-bit, 16-bit, or 32-bit integers.
 
-The loaded volume is stored in M and accessed using its three array indices.
+The volume is stored as a NumPy array and accessed using three indices.
 
-The program has been tested using a small synthetic NRRD volume. A separate performance benchmark was conducted using a 500 × 500 × 500 volume.
+The current implementation uses the array indices as voxel coordinates. It does not apply additional physical-space transformations from NRRD metadata.
 
-## 6. Video Generation
+## 8. Video Generation
 
-Each generated 2D matrix is converted into an 8-bit grayscale image for MP4 output.
+Each projection matrix is converted into an 8-bit grayscale image.
 
-The implementation scales the values for display and pads the images to consistent frame dimensions when necessary.
+The implementation finds the maximum voxel value across the generated projections and uses it to scale the images into the range 0 to 255.
 
-The frames are saved in the same order as the regions in the CSV file.
+The images may have different dimensions, so they are placed on zero-filled canvases with common frame dimensions.
 
-## 7. Complexity and Performance
+The video dimensions are adjusted to even numbers for H.264 encoding.
 
-Let H be the number of output rows and W the maximum number of sampling positions in a row.
+The frames are then written to an MP4 file using imageio.
 
-The projection requires O(H × W) sampling work for one region.
+The normal output writes one frame per projection.
 
-The output image requires O(H × W) memory, excluding the input volume and video-encoding buffers.
+A separate preview mode can enlarge small images and repeat frames to make them easier to inspect.
 
-A performance benchmark was conducted using a 500 × 500 × 500 volume and 10 measured triangle projections after one warm-up run.
+## 9. Error Handling
 
-The latest measured processing speed was 43.87 FPS, corresponding to approximately 0.0228 seconds per projection.
+The geometry validation functions raise exceptions when a triangle or trapezoid is invalid.
 
-This result exceeds the minimum requirement of 30 FPS but remains below the expected target of 100 FPS.
+The assignment requires the demo to catch plane-specific errors, generate a visible error frame, and continue processing the remaining planes.
 
-The measurement applies to the tested configuration and execution environment. It does not include the full cost of loading the input file and encoding the MP4 video.
+This behavior still needs to be completed in the main application.
+
+The CSV reading stage also needs improved error recovery so that an invalid row does not unnecessarily prevent valid later rows from being processed.
+
+## 10. Complexity Analysis
+
+Let:
+
+- H be the number of output rows.
+- W be the maximum number of sampling positions per row.
+
+For one projection, the algorithm performs approximately O(H × W) sampling operations.
+
+The output matrix requires O(H × W) memory.
+
+The intermediate NumPy arrays used to process a single row require additional O(W) memory.
+
+The complete program currently stores all generated projection matrices before video encoding.
+
+Therefore, its total memory usage depends on the combined sizes of all projections, in addition to the input volume and video-processing buffers.
+
+For N regions, the total projection work is approximately O(N × H × W) when H and W represent common upper bounds.
+
+## 11. Performance Experiment
+
+A performance benchmark was implemented using a synthetic volume of size:
+
+`500 × 500 × 500`
+
+The triangle vertices are:
+
+- A = (0, 0, 0)
+- B = (400, 0, 0)
+- C = (0, 400, 0)
+
+The benchmark performs one warm-up projection followed by 10 measured projections.
+
+Execution time is measured using `time.perf_counter()`.
+
+The latest previously reported result was 43.87 FPS, corresponding to approximately 0.0228 seconds per projection.
+
+This reported result exceeds the minimum requirement of 30 FPS but remains below the expected target of 100 FPS.
+
+The benchmark measures projection computation only. It does not include reading the NRRD file or encoding the video.
+
+The result is specific to the tested triangle and execution environment and should be verified with the final implementation.
+
+## 12. Remaining Implementation Work
+
+Before final submission, the implementation and tests need to be updated to address the following:
+
+1. Use the required absolute tolerance of 0.001 when validating equal side lengths.
+2. Enforce the trapezoid base-length constraint.
+3. Generate error frames for invalid plane definitions.
+4. Continue processing valid CSV entries after plane-specific errors.
+5. Add regression tests for these cases.
+6. Rerun the performance benchmark and document the final results.
+
+These changes are required to bring the implementation into agreement with the assignment requirements and the SRS.
