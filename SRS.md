@@ -4,232 +4,216 @@
 
 The goal of this project is to generate 2D images from 3D volumetric data, such as MRI scans.
 
-The program receives an NRRD file containing a 3D volume and a CSV file containing a list of plane coordinates. Each plane is used to generate a 2D image by sampling values from the volume.
+The application receives a 3D volume in NRRD format and a CSV file containing plane definitions. Each plane is represented by three or four points in 3D space.
 
-The resulting images are saved as frames in an MP4 video.
+For each plane, the application generates a 2D projection by sampling voxel values from the volume. The resulting images are combined into an MP4 video.
 
-This document describes the functional requirements, performance expectations, input validation, and testing requirements of the application.
+This document describes the functional requirements, input constraints, performance expectations, and testing strategy.
 
 ## 2. Overall Description
 
-The program is a command-line application written in Python.
+The application is implemented in Python and runs from the command line.
 
-It processes a 3D matrix and a sequence of plane regions defined by three or four points in 3D space.
+It supports two types of plane regions:
 
-The supported regions are:
+- Isosceles triangles defined by three points.
+- Isosceles trapezoids defined by four points.
 
-- An isosceles triangle defined by three points.
-- An isosceles trapezoid defined by four points.
+The application focuses on projection correctness, efficient processing, input validation, and code quality.
 
-The program calculates sampling positions for each region and uses the corresponding voxel values to construct a 2D image.
-
-The main focus is on correct results, efficient processing, stable execution, and clear code structure.
-
-A graphical user interface is not required.
+A graphical user interface is outside the scope of this project.
 
 ## 3. Functional Requirements
 
-### FR-01: Read NRRD Files
+### FR-01: Read NRRD Data
 
-The program shall read a 3D volume from an NRRD file.
+The application shall read a 3D volume from an NRRD file.
 
 The volume dimensions shall satisfy:
 
 1 ≤ sx, sy, sz < 1024
 
-Each voxel shall contain an unsigned 8-bit, 16-bit, or 32-bit integer value.
+Supported voxel data types are unsigned 8-bit, 16-bit, and 32-bit integers.
 
-The program shall reject unsupported volume dimensions or data types.
+Unsupported dimensions or data types shall be rejected with a clear error message.
 
 ### FR-02: Read Plane Coordinates
 
-The program shall read a CSV file containing a list of plane definitions.
+The application shall read plane definitions from a CSV file.
 
-Each CSV row shall contain:
+Each row shall contain:
 
-- 9 numeric values for a triangle.
-- 12 numeric values for a trapezoid.
+- 9 numeric values representing three 3D points.
+- 12 numeric values representing four 3D points.
 
-Every three consecutive values represent a 3D point (x, y, z).
+Each point consists of three coordinates (x, y, z).
 
-Triangle points shall be provided in the order (a, b, c).
+The application shall process the plane definitions in their original CSV order.
 
-Trapezoid points shall be provided in the order (a, b, c, d), where (a, b) and (d, c) are the two legs, and (a, d) and (b, c) are the two bases.
+### FR-03: Triangle Validation
 
-The program shall preserve the order of the plane definitions.
+For three points (a, b, c), the application shall verify that:
 
-### FR-03: Validate Triangle Coordinates
+- The distances dist(a,b) and dist(a,c) are approximately equal.
+- The triangle has nonzero side lengths.
+- The three points are not collinear.
 
-For a triangle defined by points (a, b, c), the two sides starting at point a must have approximately equal lengths.
+A numerical tolerance may be used to account for floating-point calculations.
 
-The required condition is:
+Invalid triangle definitions shall be reported.
 
-|dist(a,b) - dist(a,c)| < 0.001
+### FR-04: Trapezoid Validation
 
-The triangle must also be non-degenerate, meaning that its points must not be collinear and its required sides must have nonzero lengths.
+For four points defining a trapezoid, the application shall verify that:
 
-Invalid triangles shall raise an appropriate exception during validation.
-
-### FR-04: Validate Trapezoid Coordinates
-
-For a trapezoid defined by points (a, b, c, d), the program shall validate the following conditions:
-
-- The two legs (a,b) and (d,c) have approximately equal lengths, with an absolute difference smaller than 0.001.
-- The length of the base (a,d) is not greater than the length of the base (b,c).
-- All four points lie on the same plane.
+- The points are coplanar.
 - The two bases are parallel.
-- The shape is not degenerate or self-intersecting.
+- The two legs have approximately equal lengths.
+- The region is non-degenerate and does not self-intersect.
 
-Invalid trapezoids shall raise an appropriate exception during validation.
+The point ordering and geometric conventions shall be defined in the algorithm documentation.
+
+Invalid trapezoid definitions shall be reported.
 
 ### FR-05: Generate 2D Projections
 
-The program shall generate a 2D matrix for each valid plane definition.
+For each valid plane definition, the application shall generate a 2D matrix.
 
-The projection algorithm shall calculate sampling positions in the 3D volume based on the plane coordinates.
+Sampling positions shall be calculated using the projection algorithm described in `ALGORITHM.md`.
 
-Nearest-neighbor sampling shall be used to obtain voxel values from the volume.
+Nearest-neighbor sampling shall be used to obtain voxel values at the calculated positions.
 
-The output matrix dimensions and coordinate mapping shall follow the documented projection algorithm.
+The output dimensions and pixel positions shall follow the documented algorithm.
 
-### FR-06: Handle Out-of-Bounds Sampling
+### FR-06: Out-of-Bounds Sampling
 
-When a sampling position is outside the 3D volume, the corresponding output pixel shall receive a value of zero.
+When a sampling position falls outside the 3D volume, the corresponding output pixel shall be assigned zero.
 
-Out-of-bounds sampling alone shall not cause the projection process to stop.
+Out-of-bounds sampling shall not terminate the projection process.
 
-### FR-07: Handle Invalid Planes
+### FR-07: Invalid Plane Handling
 
-When a plane definition does not satisfy the required geometric conditions, the validation or projection logic shall raise an exception.
+The application shall detect invalid geometric plane definitions.
 
-The demo application shall handle this exception and generate a visible error frame for the invalid plane.
+The implementation may use an error frame to represent an invalid plane while continuing to process the remaining valid planes.
 
-The program shall continue processing the remaining valid planes.
+The selected behavior shall be documented and tested.
 
-An invalid plane shall not prevent the generation of the complete output video.
+### FR-08: MP4 Video Generation
 
-### FR-08: Generate MP4 Output
+The application shall generate an MP4 video containing the projection results.
 
-The program shall save the generated projections as an MP4 video.
+Frames shall follow the order of the plane definitions in the CSV file.
 
-Each plane definition shall correspond to one output frame, including an error frame when a plane is invalid.
+The generated images shall be converted into a format suitable for video encoding.
 
-The order of the frames shall match the order of the plane definitions in the CSV file.
+### FR-09: Command-Line Interface
 
-The program shall convert the generated 2D matrices into video-compatible pixel values.
+The application shall support the following command:
 
-### FR-09: Command-Line Execution
+```bash
+python Ex0.py file.nrrd file.csv file.mp4
+```
 
-The program shall support the following command format:
+The arguments represent:
 
-`python Ex0.py file.nrrd file.csv file.mp4`
+- `file.nrrd`: Input volumetric data.
+- `file.csv`: Plane coordinates.
+- `file.mp4`: Output video.
 
-Where:
+### FR-10: Input Validation
 
-- `file.nrrd` is the input 3D volume.
-- `file.csv` contains the plane definitions.
-- `file.mp4` is the output video.
+The application shall detect and report:
 
-### FR-10: Input and File Validation
-
-The program shall check the validity of input files and coordinate values.
-
-It shall detect errors such as:
-
-- Missing or unreadable files.
+- Missing or unreadable input files.
 - Unsupported NRRD data.
-- Invalid coordinate values.
 - Incorrect CSV row lengths.
+- Non-numeric or invalid coordinate values.
 - Invalid geometric plane definitions.
 
-Errors that prevent the application from processing the input shall be reported clearly.
-
-Plane-specific errors shall be handled according to FR-07.
+Errors shall be reported clearly, according to the application's documented error-handling strategy.
 
 ## 4. Non-Functional Requirements
 
 ### NFR-01: Performance
 
-For a 500 × 500 × 500 volume containing byte values, the implementation shall meet the assignment's minimum processing requirement of 30 projection frames per second.
+For a 500 × 500 × 500 volume containing byte values, the assignment requires a processing rate above 30 projection frames per second.
 
-The expected performance target is at least 100 projection frames per second.
+The expected performance target is approximately 100 FPS or higher.
 
-Performance shall be measured using a defined benchmark and documented execution environment.
+Performance shall be measured using a documented benchmark.
 
-The benchmark shall distinguish projection processing time from file loading and video encoding time.
+Projection processing time should be distinguished from file loading and video encoding time.
 
 ### NFR-02: Correctness
 
-The generated 2D matrices shall contain voxel values sampled according to the documented projection algorithm.
+The application shall produce projection matrices containing voxel values sampled according to the documented algorithm.
 
-The implementation shall produce consistent results for the same input data and plane coordinates.
+Identical inputs shall produce consistent projection results.
 
 ### NFR-03: Stability
 
-The application shall handle invalid plane definitions without interrupting the processing of other valid planes.
+The application shall handle invalid inputs without unexpected failures.
 
-Unrecoverable input and output errors shall be reported with meaningful error messages.
+Unrecoverable errors shall be reported with meaningful messages.
 
 ### NFR-04: Code Quality
 
-The implementation shall be organized into clear and reusable functions or components.
+The implementation should separate the responsibilities of:
 
-Input handling, geometry validation, projection calculations, and video generation should have separate responsibilities.
+- Input reading.
+- Geometry validation.
+- Projection calculations.
+- Video generation.
 
-The code should be easy to understand, test, and maintain.
+The code should be readable, maintainable, and testable.
 
 ### NFR-05: Testability
 
-The main parts of the implementation shall be testable independently.
+The main components shall support independent testing.
 
-The program shall include tests for valid inputs, invalid inputs, boundary conditions, and performance.
+Tests should cover valid inputs, invalid inputs, boundary conditions, and performance.
 
-## 5. Testing Requirements
+## 5. Testing Strategy
 
-The testing strategy shall cover:
+The testing strategy includes:
 
 - Valid triangle projections.
 - Valid trapezoid projections.
-- Known voxel values and expected 2D outputs.
+- Known voxel values and expected output matrices.
 - Constant-value volumes.
-- Sampling outside volume boundaries.
-- Triangle coordinates within and outside the allowed tolerance.
-- Degenerate and invalid triangles.
-- Invalid and self-intersecting trapezoids.
-- Missing or invalid input files.
-- Invalid planes followed by valid planes.
-- Error frame generation.
-- Preservation of CSV order in the generated video.
-- Performance measurements using a 500 × 500 × 500 volume.
+- Sampling positions outside the volume.
+- Degenerate or invalid plane definitions.
+- Incorrect or missing input files.
+- Verification of video frame ordering.
+- Verification of the selected invalid-plane handling behavior.
+- Performance measurements on a large volume.
 
-The testing results shall be documented and compared with the expected behavior.
+The results shall be documented and compared with the expected behavior.
 
 ## 6. Input and Output
 
 ### Input
 
-The application receives:
-
-1. An NRRD file containing a 3D volume.
-2. A CSV file containing triangle or trapezoid coordinates.
+- A 3D volumetric NRRD file.
+- A CSV file containing plane coordinates.
 
 ### Output
 
-The application produces an MP4 video containing a frame for every plane definition, in CSV order.
+An MP4 video containing projection frames in the order specified by the CSV file.
 
-Valid planes produce projection frames.
-
-Invalid geometric plane definitions produce error frames.
+Invalid planes shall be handled according to the documented error-handling strategy.
 
 ## 7. Completion Criteria
 
-The implementation will be considered complete when:
+The project is considered complete when:
 
-1. Supported NRRD files are read correctly.
-2. Triangle and trapezoid coordinates are processed according to the defined geometric conditions.
-3. The generated projections produce the expected 2D matrix values.
-4. Invalid planes are handled without stopping the processing of valid planes.
-5. The generated MP4 preserves the required frame order.
-6. The test cases pass.
-7. Performance is measured and compared against the assignment requirements.
-8. The repository contains the source code, documentation, tests, and example output.
+- Supported NRRD files are processed correctly.
+- Triangle and trapezoid definitions are validated correctly.
+- Generated projections match the expected sampled values.
+- The command-line interface works as specified.
+- MP4 frames follow the CSV order.
+- The implemented error-handling behavior is tested.
+- Tests are executed and their results documented.
+- Performance is measured against the assignment requirements.
+- The repository contains the implementation, documentation, tests, and example output.
