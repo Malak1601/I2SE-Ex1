@@ -3,3 +3,4 @@ pynrrd>=1.0
 imageio>=2.30
 imageio-ffmpeg>=0.4
 numba>=0.61
+pytest>=7
