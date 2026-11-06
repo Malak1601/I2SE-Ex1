@@ -1,216 +1,298 @@
-Software Requirements Specification (SRS)
-1. Introduction
-The goal of this project is to generate 2D images from 3D volumetric data, such as MRI scans.
+# Software Requirements Specification (SRS)
 
-The application receives a 3D volume in NRRD format and a CSV file containing plane definitions. Each plane is defined by three or four points in 3D space.
+## Ex1 – 3D Volume Plane Projection
 
-For each plane, the application calculates sampling positions and generates a 2D projection using voxel values from the volume. The resulting images are combined into an MP4 video.
+### 1. Introduction
 
-This document describes the functional requirements, input constraints, performance expectations, and testing strategy.
+#### 1.1 Purpose
 
-2. Overall Description
+The purpose of this project is to generate 2D images from a 3D volume, such as an MRI scan.
+
+The program receives a 3D volume in NRRD format and a CSV file containing a list of planes. Each plane is defined by three or four points in 3D space.
+
+For each valid plane, the program calculates sampling positions, extracts voxel values from the volume, and generates a 2D image. The images are then combined into an MP4 video.
+
+This document describes the software requirements, input constraints, geometric validation, output behavior, performance expectations, and testing strategy.
+
+#### 1.2 Scope
+
 The application is implemented in Python and runs from the command line.
 
-It supports two types of plane regions:
+It supports two types of regions:
 
-Isosceles triangles defined by three points.
-Isosceles trapezoids defined by four points.
-The application focuses on projection correctness, efficient processing, geometric validation, and code quality.
+- Isosceles triangles defined by three points.
+- Isosceles trapezoids defined by four points.
 
-A graphical user interface is outside the scope of this project.
+The project focuses on correct projection, input validation, efficient processing, and reliable video generation.
 
-3. Functional Requirements
-FR-01: Read NRRD Data
-The application shall read a 3D volume from an NRRD file.
+A graphical user interface is not required.
 
-The volume dimensions shall satisfy:
+### 2. Overall Description
 
-1 ≤ sx, sy, sz < 1024
+The program receives three command-line arguments:
 
-Supported voxel data types are unsigned 8-bit, 16-bit, and 32-bit integers.
+1. An input NRRD volume.
+2. A CSV file containing plane coordinates.
+3. An output MP4 filename.
 
-The implementation also supports signed integer volumes of these bit depths when all values are nonnegative, by converting them to the corresponding unsigned type.
+Each CSV plane definition is processed in its original order.
 
-Unsupported dimensions or data types shall be rejected with an error message.
+The application uses nearest-neighbor sampling to obtain voxel values. Samples outside the volume are assigned zero.
 
-FR-02: Read Plane Coordinates
-The application shall read plane definitions from a CSV file.
+Invalid individual plane definitions are reported and represented by error frames, allowing the program to continue with subsequent planes.
 
-Each plane shall contain:
+### 3. Functional Requirements
 
-Three 3D points (9 coordinates) for a triangle.
-Four 3D points (12 coordinates) for a trapezoid.
-Each point consists of three coordinates (x, y, z).
+#### FR-01: Read NRRD Data
 
-The application supports two CSV formats:
+The program shall read a three-dimensional volume from an NRRD file.
 
-Rows containing only the coordinates.
-Rows beginning with the number of points (3 or 4), followed by the coordinates.
-A header row in the lecturer's CSV format is supported.
+The dimensions must satisfy:
 
-Plane definitions shall be processed in their original CSV order.
+`1 <= sx, sy, sz < 1024`
 
-FR-03: Triangle Validation
-For three points (a, b, c), the application shall verify that:
+The required voxel types are unsigned 8-bit, 16-bit, and 32-bit integers.
 
-The distances dist(a,b) and dist(a,c) are approximately equal.
-The two sides have nonzero lengths.
-The three points are not collinear.
-A numerical tolerance is used to handle small floating-point differences.
+The implementation also accepts signed 8-bit, 16-bit, and 32-bit integer arrays when all values are nonnegative, converting them to the corresponding unsigned type.
 
-Invalid triangle definitions shall be reported.
+Volumes with unsupported dimensions or data types shall be rejected with an error message.
 
-FR-04: Trapezoid Validation
-For four points (a, b, c, d), the application shall verify that:
+#### FR-02: Read Plane Coordinates
 
-The points are coplanar.
-The two bases are parallel and point in the same direction.
-The two legs have approximately equal lengths.
-The region has nonzero area.
-The geometric arrangement is valid and does not produce crossing sides.
-The point ordering used by the implementation is:
+The program shall read plane definitions from a CSV file.
 
-First leg: a → b
-Second leg: c → d
-Starting base: a → c
-Ending base: b → d
-Invalid trapezoid definitions shall be reported.
+Each plane contains:
 
-FR-05: Generate 2D Projections
-For each valid plane definition, the application shall generate a 2D matrix.
+- Three 3D points (9 coordinates) for a triangle.
+- Four 3D points (12 coordinates) for a trapezoid.
 
-The algorithm advances along the two equal-length sides and samples points between their corresponding positions.
+Each point consists of three coordinates: `(x, y, z)`.
 
-Nearest-neighbor sampling shall be used to obtain voxel values.
+The CSV reader supports:
 
-The output dimensions and sampling positions shall follow the algorithm described in ALGORITHM.md.
+- Rows containing only coordinates.
+- Rows beginning with the number of points (`3` or `4`).
+- The lecturer's CSV header format.
 
-FR-06: Out-of-Bounds Sampling
-When a calculated voxel index falls outside the 3D volume, the corresponding output pixel shall be assigned zero.
+The program shall preserve the order of plane definitions in the CSV file.
 
-Out-of-bounds sampling shall not terminate the projection process.
+Empty rows are ignored.
 
-FR-07: Invalid Plane Handling
-The application shall detect invalid geometric plane definitions and malformed CSV entries.
+Malformed nonempty rows are reported as invalid entries.
 
-When an invalid plane is encountered, the implementation shall:
+#### FR-03: Triangle Validation
 
-Report the error in the terminal.
-Generate a visible error frame.
-Continue processing the remaining CSV entries.
-This preserves the number and order of output frames corresponding to the CSV entries.
+For three points `(a, b, c)`, the program shall verify that:
 
-FR-08: MP4 Video Generation
-The application shall generate an MP4 video containing the projection results.
+- The lengths `dist(a,b)` and `dist(a,c)` differ by less than `0.001`.
+- Both sides have nonzero lengths.
+- The three points are not collinear.
 
-Frames shall follow the order of the CSV entries.
+Invalid triangle definitions shall raise a `ValueError` during geometric validation.
 
-Projection matrices shall be converted into 8-bit grayscale images for video encoding.
+#### FR-04: Trapezoid Validation
 
-When projection matrices have different dimensions, they shall be placed on a common canvas.
+For four points `(a, b, c, d)`, the program shall verify that:
 
-The implementation also supports an enlarged preview mode for easier visualization.
+- The points are coplanar.
+- The two bases are parallel and have the same direction.
+- The two legs have approximately equal lengths.
+- The region has nonzero area.
+- The geometry does not produce an invalid crossing arrangement.
 
-FR-09: Command-Line Interface
-The application shall support the following command:
+The point order used by the implementation is:
 
-python3 Ex0.py file.nrrd file.csv file.mp4
+- First leg: `a → b`
+- Second leg: `c → d`
+- First base: `a → c`
+- Second base: `b → d`
+
+According to the assignment, the first base must not be longer than the second base.
+
+**Implementation note:** This final base-length condition must also be enforced in `validate_trapezoid()` before the implementation can be considered fully compliant.
+
+#### FR-05: Generate 2D Projections
+
+For each valid plane, the program shall generate a two-dimensional matrix containing sampled voxel values.
+
+The projection algorithm advances along the two equal-length legs and calculates sampling positions between the corresponding points.
+
+Nearest-neighbor sampling is used to obtain values from the volume.
+
+The implementation stores the resulting image as a two-dimensional NumPy array.
+
+The detailed sampling procedure and output dimensions are described in `ALGORITHM.md`.
+
+#### FR-06: Out-of-Bounds Sampling
+
+When a sampled voxel index is outside the volume dimensions, the corresponding output pixel shall be assigned zero.
+
+Out-of-bounds samples shall not terminate the projection process.
+
+#### FR-07: Invalid Plane Handling
+
+The program shall detect malformed CSV entries and invalid geometric definitions.
+
+When an individual plane is invalid, the application shall:
+
+1. Print an informative error message containing the CSV line number.
+2. Generate a visible error frame.
+3. Continue processing the remaining CSV entries.
+
+This preserves the order and number of frames corresponding to nonempty CSV entries.
+
+Unrecoverable errors, such as an unreadable NRRD file, may terminate execution.
+
+#### FR-08: MP4 Video Generation
+
+The program shall generate an MP4 video containing the projection results.
+
+The video shall preserve the CSV order.
+
+Projection matrices shall be converted to 8-bit grayscale images for encoding.
+
+If projections have different dimensions, they shall be placed on a common canvas.
+
+The current implementation uses H.264 encoding through ImageIO and supports an enlarged preview mode.
+
+The normal output uses one encoded frame per CSV entry. Preview mode repeats frames to make them easier to inspect.
+
+#### FR-09: Command-Line Interface
+
+The main command is:
+
+`python3 Ex0.py file.nrrd file.csv file.mp4`
 
 The arguments represent:
 
-file.nrrd: Input volume.
-file.csv: Plane definitions.
-file.mp4: Output video.
-The application shall also provide commands for running basic tests and measuring projection performance.
+- `file.nrrd`: Input 3D volume.
+- `file.csv`: Plane definitions.
+- `file.mp4`: Output video.
 
-FR-10: Input Validation
-The application shall detect and report:
+The implementation also supports:
 
-Missing or unreadable input files.
-Unsupported volume dimensions or data types.
-Incorrect CSV row lengths.
-Non-numeric or non-finite coordinates.
-Invalid triangle definitions.
-Invalid trapezoid definitions.
-Unrecoverable input errors shall terminate the program with an error message.
+`python3 Ex0.py --test`
 
-Invalid individual plane definitions shall be handled using error frames when processing can continue.
+Runs the built-in basic projection tests.
 
-4. Non-Functional Requirements
-NFR-01: Performance
-For a 500 × 500 × 500 volume containing unsigned byte values, the assignment requires a projection rate greater than 30 frames per second.
+`python3 Ex0.py --performance`
+
+Runs a projection performance benchmark.
+
+#### FR-10: Input Validation
+
+The program shall detect and report:
+
+- Missing or unreadable input files.
+- Unsupported volume dimensions or data types.
+- Incorrect CSV row lengths.
+- Non-numeric or non-finite coordinates.
+- Invalid triangle definitions.
+- Invalid trapezoid definitions.
+
+Errors affecting individual plane definitions shall be handled using error frames when processing can continue.
+
+### 4. Non-Functional Requirements
+
+#### NFR-01: Performance
+
+For a `500 × 500 × 500` volume containing unsigned 8-bit values, the assignment requires a projection computation rate greater than 30 FPS.
 
 The expected performance target is approximately 100 FPS.
 
-The implementation uses Numba to accelerate the main projection loop.
+The implementation uses Numba JIT compilation to accelerate the projection loop.
 
-Performance shall be measured using a documented benchmark after an initial compilation warm-up.
+Performance measurements shall exclude the initial Numba compilation warm-up and distinguish projection computation from NRRD loading and MP4 encoding.
 
-Projection computation time shall be measured separately from NRRD loading and MP4 encoding.
+The actual measured results must be documented separately. The presence of a benchmark does not by itself establish that the performance target has been achieved.
 
-NFR-02: Correctness
-The application shall produce projection matrices containing voxel values sampled according to the documented algorithm.
+#### NFR-02: Correctness
 
-Identical inputs shall produce consistent results.
+The program shall generate projection matrices using the documented sampling algorithm.
 
-NFR-03: Stability
-The application shall handle invalid plane definitions without terminating the entire processing sequence.
+Identical inputs shall produce consistent projection results.
 
-Unrecoverable errors shall be reported using meaningful messages.
+Known voxel values and expected output matrices shall be used to test correctness.
 
-NFR-04: Code Quality
-The implementation shall separate the responsibilities of:
+#### NFR-03: Robustness
 
-Input reading and validation.
-Geometry calculations.
-Projection generation.
-Frame conversion.
-Video encoding.
-Testing and benchmarking.
-The code should remain readable, maintainable, and testable.
+The program shall handle invalid individual plane definitions without terminating the entire processing sequence.
 
-NFR-05: Testability
-The main components shall support independent testing.
+Unrecoverable errors shall be reported with meaningful messages.
 
-Tests should cover valid inputs, invalid inputs, boundary conditions, known output values, and performance.
+#### NFR-04: Code Quality
 
-5. Testing Strategy
-The testing strategy includes:
+The implementation shall keep the following responsibilities identifiable:
 
-Valid triangle projections.
-Valid trapezoid projections.
-Rectangle projections.
-Known voxel values and expected output matrices.
-Constant-value volumes.
-Sampling positions outside the volume.
-Degenerate or invalid plane definitions.
-Numerical tolerance checks.
-CSV parsing and recovery from invalid rows.
-Error-frame generation.
-Testing with real MRI volume data.
-Performance measurements on a large volume.
-Additional verification should include checking the output video's frame count and order against the CSV entries.
+- CSV reading and input validation.
+- Geometry calculations.
+- Projection generation.
+- Frame conversion.
+- Video encoding.
+- Testing and performance measurement.
 
-The basic tests are available through Ex0.py --test, and additional tests are implemented in test_extra.py.
+The current implementation organizes these responsibilities into separate functions within `Ex0.py`.
 
-6. Input and Output
-Input
-A 3D volumetric NRRD file.
-A CSV file containing plane coordinates.
-Output
-An MP4 video containing the projection results in CSV order.
+#### NFR-05: Testability
 
-Invalid plane definitions are represented by error frames.
+The implementation shall support independent testing of the main functions.
 
-7. Completion Criteria
+Tests should cover valid inputs, invalid inputs, numerical boundaries, expected voxel values, and performance.
+
+### 5. Testing Strategy
+
+The testing strategy includes the following cases:
+
+- Valid isosceles triangles.
+- Valid trapezoids and rectangles.
+- Known voxel values and expected projection matrices.
+- Samples outside the volume.
+- Invalid triangle definitions.
+- Trapezoid geometry validation.
+- Numerical tolerance conditions.
+- CSV parsing and invalid-row handling.
+- Error-frame generation.
+- Testing with an MRI NRRD volume.
+- Performance measurement using a large volume.
+
+The built-in tests can be executed using:
+
+`python3 Ex0.py --test`
+
+The performance benchmark can be executed using:
+
+`python3 Ex0.py --performance`
+
+Additional tests are maintained separately in `test_extra.py`.
+
+The final verification should also confirm that the generated MP4 contains the expected number of frames in the correct order.
+
+### 6. Input and Output
+
+#### Input
+
+- A three-dimensional NRRD volume.
+- A CSV file containing plane definitions.
+
+#### Output
+
+- An MP4 video containing the projection results in CSV order.
+- Terminal messages describing processed projections and errors.
+
+Invalid individual plane definitions are represented by error frames.
+
+### 7. Completion Criteria
+
 The project is considered complete when:
 
-Supported NRRD files are processed correctly.
-Triangle and trapezoid definitions are validated.
-Generated projections match expected sampled values.
-The command-line interface works as specified.
-The MP4 output preserves the intended frame order.
-Invalid inputs are handled as documented.
-Correctness tests are executed successfully.
-Performance is measured against the assignment requirements.
-The repository contains the implementation, documentation, tests, and required submission materials
+1. Supported NRRD files are read correctly.
+2. CSV plane definitions are processed in order.
+3. Triangle and trapezoid geometry is validated according to the assignment.
+4. Projection matrices contain the expected sampled voxel values.
+5. Out-of-bounds samples are handled correctly.
+6. Invalid individual planes produce error frames without stopping subsequent processing.
+7. The command-line interface generates an MP4 video successfully.
+8. The video preserves the expected frame count and order.
+9. Correctness tests pass.
+10. Performance is measured and compared with the assignment requirements.
+11. The GitHub repository contains the implementation, documentation, tests, and relevant experiment results.
