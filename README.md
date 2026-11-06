@@ -1,116 +1,152 @@
-# 3D Medical Volume Plane Projection
+# I2SE Ex1 – 3D Volume Plane Projection
 
-## Problem Statement
+**Course:** Introduction to Software Engineering  
+**Ariel University**
 
-The goal of this project is to generate 2D images from 3D volumetric data, such as MRI scans.
+## 1. Overview
 
-The program receives a 3D volume stored in an NRRD file and a CSV file containing plane definitions. Each plane is defined by three or four points in 3D space.
+This project implements an algorithm for extracting 2D projections from a 3D volume, such as an MRI scan.
 
-For each plane, the program calculates sampling positions, reads the corresponding voxel values, and generates a 2D image. The images are then combined into an MP4 video.
+The program receives an NRRD file containing volumetric data and a CSV file containing a list of planes. Each plane is defined by three or four points in 3D space.
 
-The main challenge is to implement the projection correctly and efficiently while handling different plane orientations, volume boundaries, and invalid inputs.
+For every plane, the program calculates the corresponding sampling positions, retrieves voxel values from the volume, and generates a 2D image. The resulting images are combined into an MP4 video in the same order as the CSV entries.
 
-## Project Scope
+The main challenge is to design a correct and efficient projection algorithm while handling different plane orientations, volume boundaries, and invalid inputs.
 
-The project includes:
+## 2. Project Scope
 
-- Reading 3D volume data from NRRD files.
-- Reading plane coordinates from CSV files.
+The implementation includes:
+
+- Reading 3D volumetric data from NRRD files.
+- Reading plane definitions from CSV files.
 - Supporting isosceles triangles and isosceles trapezoids.
-- Validating geometric conditions.
+- Validating geometric conditions using a tolerance of 0.001.
 - Generating 2D projections using nearest-neighbor sampling.
 - Assigning zero to sampling positions outside the volume.
-- Saving the generated projections as an MP4 video.
+- Generating error frames for invalid plane definitions while continuing with valid entries.
+- Saving the projections as an MP4 video.
 - Testing correctness and measuring projection performance.
 
-The project focuses on the projection algorithm, its design, performance, and implementation. It is not intended to be a complete medical imaging application.
+The project focuses on algorithm design, correctness, runtime efficiency, and code quality. It does not include a graphical user interface or physical-coordinate transformations.
 
-## Installation
+## 3. Installation
 
-The project was developed using Python.
+The project is implemented in Python.
 
-Required Python packages:
+The main dependencies are:
 
-- numpy
+- NumPy
 - pynrrd
-- numba
+- Numba
 - imageio
 - imageio-ffmpeg
 
-Install the dependencies using:
+Install the required packages from the project directory:
 
 ```bash
-python3 -m pip install numpy pynrrd numba imageio imageio-ffmpeg
+python -m pip install -r requirements.txt
 ```
 
-A Python virtual environment is recommended.
+Using a Python virtual environment is recommended.
 
-## Input and Output
+## 4. Input and Output
 
 The program accepts three command-line arguments:
 
-1. **NRRD file:** A 3D volume containing voxel values.
-2. **CSV file:** A list of planes, each defined by three or four 3D points.
-3. **MP4 file:** The output video containing the generated projections in CSV order.
+```bash
+python Ex0.py file.nrrd file.csv file.mp4
+```
 
-The program supports unsigned 8-bit, 16-bit, and 32-bit integer volumes. It also converts signed integer volumes when all voxel values are nonnegative.
+| Argument | Description |
+|---|---|
+| `file.nrrd` | Input 3D volume |
+| `file.csv` | CSV file containing plane definitions |
+| `file.mp4` | Output video containing the generated projections |
+
+The required volume format uses unsigned 8-bit, 16-bit, or 32-bit integer values. The implementation also supports nonnegative signed integer volumes.
 
 ### CSV Format
 
-The program accepts CSV rows containing either nine coordinates for a triangle or twelve coordinates for a trapezoid.
+Each plane is represented by either three or four points:
 
-It also supports the lecturer's CSV format, where each row begins with the number of points (3 or 4).
+- **Triangle:** 9 coordinates defining three 3D points.
+- **Trapezoid:** 12 coordinates defining four 3D points.
 
-For a triangle, the first point is the common vertex of the two equal-length sides.
+The implementation also supports the lecturer's CSV format, where each row begins with the number of points (3 or 4).
 
-For a trapezoid, the points are interpreted as follows:
+For triangles, the first point is the common vertex of the two equal-length sides.
 
-- The first leg connects points `a` and `b`.
-- The second leg connects points `c` and `d`.
-- The starting base connects `a` and `c`.
-- The ending base connects `b` and `d`.
+For trapezoids, the points define two equal-length legs connecting the parallel bases.
 
-### Running the Program
+Each valid CSV entry produces one projection frame.
 
-Example using the included test files:
+## 5. Running the Program
+
+Run the program from the repository's main directory.
+
+Example using the small test dataset:
 
 ```bash
-python3 Ex0.py test.nrrd test.csv output.mp4
+python Ex0.py data/test.nrrd data/test.csv results/output.mp4
 ```
 
 Example using the MRI dataset:
 
 ```bash
-python3 Ex0.py "MRHead_1 (6).nrrd" MRHead_demo.csv MRHead_demo_preview.mp4
+python Ex0.py "MRHead_1 (6).nrrd" data/MRHead_demo.csv results/MRHead_demo.mp4
 ```
 
-The program prints information about the volume, the number of CSV entries, and the generated projections.
+The MRI example assumes the NRRD file is available locally under the specified name.
 
-Invalid plane definitions are reported, and an error frame is added to preserve the order of the CSV entries.
+The program processes the planes in CSV order and writes the resulting frames into an MP4 video.
 
-## Projection Algorithm
+If a plane definition is invalid, the program reports the problem and generates an error frame instead of stopping the entire process.
 
-The projection algorithm generates a 2D image by sampling points along a plane in the 3D volume.
+## 6. Projection Algorithm
 
-For an isosceles triangle, the two sides starting from the first vertex must have approximately equal lengths.
+The projection algorithm samples a 3D volume along a plane and produces a corresponding 2D matrix.
 
-The algorithm advances along these two sides. At each step, it calculates the positions between the corresponding points and samples the volume.
+### Isosceles Triangle
 
-For an isosceles trapezoid, the algorithm follows the two equal-length legs and samples the points between them.
+A triangle is defined by three points `a`, `b`, and `c`, where the distances from `a` to `b` and from `a` to `c` are approximately equal.
 
-Nearest-neighbor sampling converts continuous coordinates into voxel indices. Positions outside the volume receive a value of zero.
+The algorithm advances along the two equal-length sides. At each step, it samples the positions between the corresponding points and maps their voxel values into the output image.
 
-The computationally intensive projection loop is implemented using Numba to improve performance.
+### Isosceles Trapezoid
 
-More details are available in [ALGORITHM.md](ALGORITHM.md).
+For a trapezoid, the algorithm advances along two equal-length legs and samples the positions between them.
 
-## Software Requirements
+### Sampling and Boundaries
 
-The functional and non-functional requirements are described in [SRS.md](SRS.md).
+Nearest-neighbor sampling is used to convert continuous 3D coordinates into voxel indices.
 
-## Testing
+Positions outside the volume are assigned a value of zero.
 
-The project includes basic tests and additional tests covering:
+The computationally intensive projection loop uses Numba to improve runtime performance.
+
+The geometric validation, sampling decisions, and algorithm details are described in [ALGORITHM.md](docs/ALGORITHM.md).
+
+## 7. Error Handling
+
+Input validation is performed before projecting each plane.
+
+The program checks for conditions such as:
+
+- Invalid coordinate values.
+- Degenerate triangles.
+- Triangles that do not satisfy the equal-side condition.
+- Invalid trapezoid geometry.
+- Non-coplanar or non-parallel trapezoid configurations.
+
+For an invalid plane, an exception is raised during validation and handled by the demo program.
+
+An error frame is added to the output video, allowing the remaining valid planes to be processed.
+
+This preserves the order of the CSV entries.
+
+## 8. Testing
+
+The project includes tests for:
 
 - Known voxel values.
 - Constant-volume projections.
@@ -119,42 +155,44 @@ The project includes basic tests and additional tests covering:
 - Triangle tolerance.
 - Valid and invalid trapezoids.
 - Rectangle projections.
-- CSV parsing and error recovery.
+- CSV parsing and error handling.
 - Error-frame generation.
 
-Run the basic tests:
+Run the built-in tests:
 
 ```bash
-python3 Ex0.py --test
+python Ex0.py --test
 ```
 
 Run the additional tests:
 
 ```bash
-python3 test_extra.py
+python tests/test_extra.py
 ```
 
-The project also includes small test files, `test.nrrd` and `test.csv`.
+Small test files are provided in the `data/` directory.
 
-## Performance
+The testing approach and test cases are described in [TESTING.md](docs/TESTING.md).
 
-The assignment requires a projection rate greater than 30 frames per second for the specified benchmark.
+## 9. Performance
 
-The implementation uses Numba to compile the main projection loop.
+The assignment specifies a minimum projection rate of 30 FPS for a 500 × 500 × 500 volume, with 100 FPS as the expected performance target.
 
-Run the performance benchmark using:
+The implementation uses Numba to compile the main projection loop and reduce Python-level processing overhead.
+
+Run the benchmark using:
 
 ```bash
-python3 Ex0.py --performance
+python Ex0.py --performance
 ```
 
-The benchmark uses a 500 × 500 × 500 volume and performs ten projections after a Numba warm-up.
+The benchmark uses a 500 × 500 × 500 volume and performs ten projections after the initial Numba compilation.
 
-In one local test, the measured projection rate was approximately **443 FPS**.
+In a local benchmark, the measured projection rate was approximately **443 FPS**.
 
-This measurement covers projection computation only. It excludes NRRD loading and MP4 encoding, and the result may vary depending on hardware and test conditions.
+This measurement covers projection computation only. It excludes NRRD loading, MP4 encoding, and the initial Numba compilation. Results may vary depending on hardware and test conditions.
 
-## Experiment and Results
+## 10. Experiment and Results
 
 The implementation was tested using an MRI volume with dimensions:
 
@@ -162,41 +200,77 @@ The implementation was tested using an MRI volume with dimensions:
 
 A demonstration CSV containing four valid plane definitions was used to generate different 2D views of the volume.
 
-The program successfully generated four projections and saved them in an MP4 video.
+The program generated four projection frames and saved them as an MP4 video.
 
-The resulting images included sagittal, axial, and triangular views of the MRI data.
+The resulting images included different MRI orientations, including sagittal, axial, and triangular views.
 
-The lecturer's CSV file was also tested. Three plane definitions were accepted, while one triangle was rejected because its two required sides were not approximately equal.
+The lecturer's CSV file was also tested. Three plane definitions were accepted, while one triangle was rejected because its two required sides did not satisfy the equal-length condition.
 
-The generated images demonstrate that the program can sample a real 3D volume and produce 2D projections with different orientations.
+These experiments demonstrate the ability to generate projections from real volumetric data using different plane orientations.
 
-## Repository Files
+The experiment documentation is available in [results.md](results/results.md).
 
-- `Ex0.py` — Main implementation.
-- `README.md` — Project overview and usage instructions.
-- `SRS.md` — Software requirements specification.
-- `ALGORITHM.md` — Algorithm description and design decisions.
-- `test_extra.py` — Additional correctness tests.
-- `test.nrrd` — Small test volume.
-- `test.csv` — Test plane definitions.
-- `MRHead_demo.csv` — MRI demonstration planes.
-- `Ex0_lecturer.csv` — Lecturer CSV test cases.
-- `output.mp4` — Generated projection video.
-- `output_large_preview.mp4` — Enlarged preview video.
-- `.gitignore` — Git ignore configuration.
+The final generated video is available in [output.mp4](results/output.mp4).
 
-Additional generated videos and MRI data files may be kept locally rather than committed to the repository.
+## 11. Repository Structure
 
-## Limitations
+```text
+I2SE-Ex1/
+├── data/
+│   ├── Ex0_lecturer.csv
+│   ├── MRHead_demo.csv
+│   ├── test.csv
+│   └── test.nrrd
+│
+├── docs/
+│   ├── SRS.md
+│   ├── ALGORITHM.md
+│   └── TESTING.md
+│
+├── results/
+│   ├── results.md
+│   └── output.mp4
+│
+├── tests/
+│   └── test_extra.py
+│
+├── Ex0.py
+├── README.md
+├── requirements.txt
+└── .gitignore
+```
 
-The program interprets plane coordinates directly as voxel coordinates.
+The main files are organized as follows:
 
-The MP4 output uses 8-bit grayscale frames, so higher-bit-depth voxel values are normalized for video display.
+| File | Purpose |
+|---|---|
+| `Ex0.py` | Main implementation and command-line interface |
+| `README.md` | Project overview and usage instructions |
+| `docs/SRS.md` | Software requirements specification |
+| `docs/ALGORITHM.md` | Algorithm design and implementation decisions |
+| `docs/TESTING.md` | Testing strategy |
+| `data/` | Sample CSV and NRRD inputs |
+| `tests/test_extra.py` | Additional correctness tests |
+| `results/results.md` | Experiment and performance results |
+| `results/output.mp4` | Generated projection video |
+| `requirements.txt` | Python dependencies |
 
-The performance benchmark measures the projection stage separately from video encoding.
+## 12. Design Decisions and Limitations
 
-## Conclusion
+Several design decisions were made to keep the implementation clear and efficient:
 
-The project implements a 3D-to-2D plane projection algorithm supporting triangular and trapezoidal regions.
+- Plane coordinates are interpreted as voxel coordinates rather than physical coordinates.
+- Nearest-neighbor sampling is used instead of interpolation.
+- Samples outside the volume receive a value of zero.
+- Higher-bit-depth voxel values are normalized for grayscale video display.
+- Projection computation is measured separately from video encoding.
 
-The implementation includes geometric validation, boundary handling, video generation, automated tests, and performance optimization using Numba.
+The implementation does not include a graphical interface, GPU acceleration, or advanced interpolation.
+
+## 13. Conclusion
+
+The project implements a 3D-to-2D plane projection algorithm supporting isosceles triangles and trapezoids.
+
+It includes geometric validation, boundary handling, MP4 generation, correctness tests, and performance optimization using Numba.
+
+The implementation demonstrates how a geometric projection problem can be translated into a practical software solution with attention to design, correctness, and runtime efficiency.
