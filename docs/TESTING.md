@@ -139,3 +139,51 @@ The automated tests cover the main functional requirements of the project, inclu
 The recorded test run completed with all 45 tests passing.
 
 The combination of automated tests, a command-line demo, and a performance experiment provides evidence for the correctness and efficiency of the implementation.
+## 11. Additional Edge Case Testing
+
+Additional tests were performed using selected cases from the supplementary `edge_cases.csv` file.
+
+The tests used the original projection functions from `Ex0.py` with a synthetic volume of dimensions `200 × 180 × 160`, filled with the value 100 and stored as `uint8`.
+
+### Triangle Tests
+
+| Case | Observed Result | Description |
+|---|---|---|
+| 4 | Accepted | Generated a nonempty projection |
+| 5 | Accepted | Generated a nonempty projection |
+| 6 | Accepted | Equal-length sides; plane coordinates outside the test volume |
+| 7 | Rejected | Failed triangle geometry validation |
+| 12 | Rejected | Collinear triangle vertices |
+| 13 | Rejected | Failed triangle geometry validation |
+
+Case 6 was checked separately. The two required sides had equal lengths, and the triangle was nondegenerate. Its acceptance was therefore geometrically valid.
+
+### Trapezoid Tests
+
+| Case | Observed Result | Description |
+|---|---|---|
+| 1 | Accepted | Projection generated |
+| 2 | Accepted | Projection generated |
+| 3 | Accepted | Projection generated |
+| 14 | Rejected | Unequal leg lengths reported |
+| 15 | Rejected | Invalid base configuration reported |
+
+These tests confirmed that the program accepts the selected valid geometries and rejects the selected invalid geometries.
+
+### Integer Data Type Tests
+
+The program was also tested with synthetic NRRD volumes using three unsigned integer types.
+
+| Data Type | Result |
+|---|---|
+| uint8 | Projection generated successfully |
+| uint16 | Projection generated successfully |
+| uint32 | Projection generated successfully |
+
+Each test used a valid isosceles triangle and produced a nonempty projection with 72 nonzero pixels.
+
+### Limitations
+
+These tests cover selected examples and do not constitute exhaustive verification of all possible geometric configurations.
+
+The edge case tests were executed directly against the projection functions rather than through the complete CSV-to-MP4 pipeline.
