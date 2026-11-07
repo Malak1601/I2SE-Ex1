@@ -163,7 +163,7 @@ The main MRI video included in the repository is:
 
 A shorter MRI example is also included:
 
-[output (5).mp4](../results/output%20%285%29.mp4)
+[output.mp4](../results/output.mp4)
 
 This short video contains four frames at 30 FPS, lasting approximately 0.13 seconds.
 
