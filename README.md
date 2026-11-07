@@ -93,7 +93,7 @@ The repository includes a principal MRI video and additional Croissant and Onion
 | [MRI main demonstration](results/mri_final.mp4) | 100 | 30 | Main video example |
 | [Croissant reference](results/croissant_reference.mp4) | 100 | 30 | Additional dataset |
 | [Onion reference](results/onion_reference.mp4) | 120 | 30 | Additional dataset |
-| [Short four-plane example](results/output%20%285%29.mp4) | 4 | 30 | Short demonstration |
+| [Short four-plane example](results/output.mp4) | 4 | 30 | Short demonstration |
 
 See [Video results index](results/results.md) for details. Encoded playback FPS should not be confused with measured projection computation FPS.
 
