@@ -1,178 +1,90 @@
-# Performance Experiment and Results
+Performance Experiment and Results
+1. Objective
+This report evaluates the correctness, computational performance, and video-generation behavior of the 3D volume plane projection program. The program reads an NRRD volume and CSV plane definitions, produces two-dimensional projections, and encodes them as an MP4 video.
 
-## 1. Objective
-
-The purpose of this experiment is to evaluate the performance of the plane projection algorithm and demonstrate its ability to generate MP4 videos from 3D NRRD volumes and CSV files containing plane coordinates.
-
-The assignment requires a minimum projection rate of 30 FPS, with approximately 100 FPS expected for a 500 × 500 × 500 volume.
-
-The experiments focus on computational performance, correctness, and the ability to process different datasets.
-
-## 2. Implementation
-
-The project is implemented in Python.
-
-The main libraries are:
-
-- **NumPy:** Stores the 3D volume and projection matrices.
-- **pynrrd:** Reads NRRD files.
-- **Numba:** Accelerates the projection loop using JIT compilation.
-- **imageio and imageio-ffmpeg:** Generate MP4 video files.
-
-The projection algorithm uses nearest-neighbor sampling. Coordinates outside the volume produce zero-valued pixels.
-
-The implementation supports projections defined by isosceles triangles and isosceles trapezoids.
-
-## 3. Performance Benchmark
-
-The benchmark was executed using:
-
-```bash
+The assignment specifies a projection rate above 30 FPS and an expected target of approximately 100 FPS for a 500 × 500 × 500 unsigned-byte volume. The reported benchmark measures projection computation, not end-to-end video throughput.
+2. Implementation and method
+The program is written in Python and uses:
+- NumPy for volume and projection arrays.
+- pynrrd for reading NRRD volumes.
+- Numba for JIT acceleration of the numerical sampling loop.
+- imageio and imageio-ffmpeg for MP4 encoding.
+- pytest for automated regression tests.
+The algorithm supports isosceles triangular and trapezoidal regions. It samples nearest-neighbor voxel values, assigns zero to out-of-volume positions, and produces marked error frames for invalid individual plane definitions.
+3. Projection performance benchmark
+Run from the repository root:
 python Ex0.py --performance
-```
+The built-in benchmark creates a synthetic uint8 volume of dimensions 500 × 500 × 500 and measures ten projections after a warm-up run. The benchmark triangle is defined by a = (0, 0, 0), b = (400, 0, 0), and c = (0, 400, 0).
+Latest recorded results
+Measurement	Result
+Volume dimensions	500 × 500 × 500
+Voxel type	uint8
+Measured projections	10
+Average projection time	approximately 0.00141 seconds
+Projection computation rate	710.91 FPS
+Assignment minimum	Above 30 FPS
+Expected target	Approximately 100 FPS
 
-The program creates a synthetic unsigned 8-bit volume of size 500 × 500 × 500.
 
-It projects a triangle defined by:
+These are the results reported from the corrected Ex0.py run. The measured projection-computation rate exceeds the stated minimum and expected target for this benchmark configuration.
 
-- a = (0, 0, 0)
-- b = (400, 0, 0)
-- c = (0, 400, 0)
+Measurement scope: NRRD file loading, MP4 encoding, filesystem operations, and the initial Numba compilation are excluded. Results depend on the machine, geometry, output dimensions, and runtime conditions. Therefore, the measured 710.91 FPS must not be presented as the final video's playback frame rate or end-to-end encoding throughput.
+4. Automated correctness testing
+The regression tests cover geometry, CSV parsing, known voxel values, out-of-volume behavior, projection construction, video creation, error frames, and lecturer-specific requirements.
 
-A warm-up projection is performed before measuring execution time to exclude the initial Numba compilation.
+The suite includes:
+- tests/test_csv.py
+- tests/test_geometry.py
+- tests/test_projection.py
+- tests/test_video.py
+- tests/test_extra.py
+- tests/test_lecturer_requirements.py
+Run:
+python -m pytest tests/ -q
+Latest recorded result on the corrected implementation: 52 passed in 6.70 seconds. This is a record of one successful local run, not proof that every possible input has been tested.
 
-The algorithm is then executed 10 times.
+Selected manual edge cases and uint8, uint16, and uint32 synthetic-volume checks were also documented during development. Those earlier checks should be distinguished from the latest 52-test regression run; see [Testing Strategy](TESTING.md).
+5. Small reproducible end-to-end demonstration
+The repository's small synthetic example uses:
+- data/demo_small.nrrd — a 16 × 16 × 16 volume.
+- data/demo_small.csv — two plane definitions.
+- results/demo_small.mp4 — the generated video.
+Run:
+python Ex0.py data/demo_small.nrrd data/demo_small.csv results/demo_small.mp4
+The recorded successful run reported:
+Item	Observed result
+Volume shape	(16, 16, 16)
+CSV entries	2
+Projection 1	Shape (10, 16), 87 nonzero values
+Projection 2	Shape (10, 11), 110 nonzero values
+Output	results/demo_small.mp4 saved
 
-### Measured Results
 
-| Measurement | Result |
-|---|---|
-| Volume dimensions | 500 × 500 × 500 |
-| Data type | uint8 |
-| Number of measured projections | 10 |
-| Average time per projection | 0.00189 seconds |
-| Projection rate | 530.43 FPS |
-| Minimum required rate | 30 FPS |
-| Expected rate | Approximately 100 FPS |
+A frame extracted from the video was visually inspected and showed a nonempty grayscale triangular projection on a black background. Because the normal output has only two frames, playback at 30 FPS is very brief; this is expected and does not indicate a failed projection.
+6. MRI demonstration
+An MRI NRRD volume was used to demonstrate projection of real volumetric data. A previously generated four-plane video is documented as results/output (5).mp4 (four frames at 30 FPS, approximately 0.13 seconds).
 
-The latest benchmark achieved an average projection time of 0.00189 seconds, corresponding to 530.43 projection FPS.
+Additional MRI slice sequences were generated during development. Their exact filenames, frame counts, and availability in the submitted repository should be checked before citing them as final deliverables. The source MRI NRRD may be kept separately because of its size; dataset acquisition instructions belong in [Dataset Documentation](DATASET.md).
+7. Additional experiments: Croissant and Onion
+Two further NRRD datasets were used to test the same projection implementation with different volume shapes and CSV plane sequences.
+Dataset	Volume dimensions	Voxel type	Reference CSV entries	Recorded video
+Croissant	500 × 500 × 500	uint8	100	results/croissant_reference.mp4
+Onion	256 × 256 × 130	uint8	120	results/onion_reference.mp4
 
-This exceeds both the minimum required rate of 30 FPS and the expected target of approximately 100 FPS for the tested projection.
 
-**Important:** This benchmark measures projection computation only. It does not include NRRD file loading, MP4 encoding, or initial Numba JIT compilation. Performance may vary between runs, hardware configurations, and plane geometries.
+The reference CSV runs generated successive cross-sectional views. The previously recorded videos had the following playback properties:
+Video	Frames	Playback FPS	Approximate duration
+results/croissant_reference.mp4	100	30	3.33 seconds
+results/onion_reference.mp4	120	30	4.00 seconds
 
-## 4. Video Demonstration
 
-The project generates MP4 videos from NRRD data and CSV plane definitions.
+Three-plane experiments using orthogonal rectangular regions were also performed, producing results/croissant.mp4 and results/onion.mp4. Separate preview files repeated frames to make short sequences easier to inspect. Repeated preview frames are not additional projection computations.
 
-The main command is:
-
-```bash
-python Ex0.py file.nrrd file.csv file.mp4
-```
-
-The program processes the plane definitions in CSV order and generates the corresponding video frames.
-
-Valid planes produce grayscale projection images. Invalid plane definitions are handled by generating marked error frames, allowing subsequent valid entries to be processed.
-
-### Generated Video Outputs
-
-| Dataset | Video File | Frames | FPS | Duration |
-|---|---|---:|---:|---:|
-| MRI | `results/output (5).mp4` | 4 | 30 | Approximately 0.13 seconds |
-| Croissant | `results/croissant_reference.mp4` | 100 | 30 | 3.33 seconds |
-| Onion | `results/onion_reference.mp4` | 120 | 30 | 4.00 seconds |
-
-The Croissant and Onion videos demonstrate the processing of longer sequences of plane definitions from CSV files.
-
-The MRI video demonstrates a shorter four-plane sequence.
-
-The number of frames corresponds to the number of processed plane definitions for these experiments.
-
-## 5. Automated Testing
-
-The project includes automated tests for:
-
-- Triangle and trapezoid geometry validation.
-- CSV input parsing and invalid entries.
-- Nearest-neighbor sampling and volume boundaries.
-- Projection values and output data types.
-- Error-frame generation.
-- MP4 creation, frame order, and preview output.
-
-The test suite was executed using:
-
-```bash
-python -m pytest -q
-```
-
-### Test Results
-
-**45 tests passed in 14.84 seconds.**
-
-All tests in this execution completed successfully.
-
-Additional manual tests were performed using selected edge cases and synthetic NRRD volumes with uint8, uint16, and uint32 data types.
-
-Detailed test descriptions and results are documented in `docs/TESTING.md`.
-
-## 6. Additional Experiments: Croissant and Onion
-
-Two additional NRRD datasets were used to evaluate the projection algorithm on different 3D volumes.
-
-### Croissant Dataset
-
-- Volume dimensions: 500 × 500 × 500
-- Data type: uint8
-- Reference CSV: `data/croissant_reference.csv`
-- Number of plane definitions: 100
-- Generated video: `results/croissant_reference.mp4`
-
-The program processed the 100 plane definitions and generated an MP4 video showing successive views of the croissant volume.
-
-The resulting video was visually inspected, and the projections were clearly visible.
-
-### Onion Dataset
-
-- Volume dimensions: 256 × 256 × 130
-- Data type: uint8
-- Reference CSV: `data/onion_reference.csv`
-- Number of plane definitions: 120
-- Generated video: `results/onion_reference.mp4`
-
-The program processed the reference CSV and saved the resulting MP4 video.
-
-The video was visually inspected and showed clear successive views of the onion volume.
-
-### Additional Three-Plane Tests
-
-For each dataset, three orthogonal rectangular planes were generated to test different orientations.
-
-| Dataset | Number of Planes | Output |
-|---|---:|---|
-| Croissant | 3 | `results/croissant.mp4` |
-| Onion | 3 | `results/onion.mp4` |
-
-Separate preview videos were generated by repeating the three original frames for easier viewing.
-
-These preview videos do not represent additional projection computations.
-
-### Observations
-
-The experiments demonstrate that the same implementation can generate projections from different NRRD volumes and CSV plane definitions.
-
-The reference CSV files provide longer projection sequences than the manually created three-plane examples.
-
-The experiments also demonstrate the ability to process volumes of different dimensions without modifying the projection algorithm.
-
-## 7. Conclusion
-
-The experiments demonstrate that the implemented algorithm can efficiently compute 2D projections from 3D volumes.
-
-For the latest synthetic-volume benchmark, the implementation achieved **530.43 projection FPS**, exceeding the assignment's minimum and expected performance targets for projection computation.
-
-Additional experiments using MRI, Croissant, and Onion datasets demonstrated video generation from different volume dimensions and plane sequences.
-
-The project includes automated tests for correctness, geometry validation, input handling, and video generation.
-
-The performance benchmark measures projection computation only and should not be interpreted as an end-to-end MP4 generation rate.
+The earlier videos were visually inspected and showed visible projections. These observations describe development experiments; verify that each linked or named output is actually included in the final GitHub repository before submission.
+8. Interpretation and limitations
+The experiments support the following conclusions:
+1. The corrected implementation passed the latest recorded 52 automated tests.
+2. A small NRRD-to-MP4 workflow completed successfully, with two nonempty projections.
+3. The synthetic benchmark achieved 710.91 projection FPS for the measured triangle, exceeding the assignment's stated performance thresholds for that configuration.
+4. Earlier MRI, Croissant, and Onion experiments demonstrated processing of different volume sizes and longer CSV sequences.
+The experiments do not establish exhaustive geometric correctness, uniform performance for every permitted plane, or 710.91 FPS end-to-end video production. Final verification should compare the submitted code and test outputs, confirm the presence of referenced artifacts, and check MP4 frame counts and CSV order.

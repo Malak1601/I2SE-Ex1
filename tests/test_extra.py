@@ -52,7 +52,7 @@ def test_known_values():
 
     expected = np.array([
         [0, 10, 3, 0],
-        [20, 13, 13, 6]
+        [20, 13, 13, 0]
     ], dtype=np.uint8)
 
     np.testing.assert_array_equal(E, expected)

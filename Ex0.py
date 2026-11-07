@@ -118,6 +118,9 @@ def prepare_volume(volume):
 def sample_nearest(M, point):
     if len(point) != 3 or not all(math.isfinite(float(v)) for v in point):
         raise ValueError("Sample position must contain three finite coordinates")
+    # Reject coordinates outside the continuous volume BEFORE rounding.
+    if not all(0 <= float(point[i]) < M.shape[i] for i in range(3)):
+        return 0
     indices = tuple(math.floor(float(v) + 0.5) for v in point)
     if all(0 <= indices[i] < M.shape[i] for i in range(3)):
         return M[indices]
@@ -144,21 +147,31 @@ def _render_rows_jit(M, start1, start2, vector1, vector2, leg_length,
                 ix = math.floor(p1x + 0.5)
                 iy = math.floor(p1y + 0.5)
                 iz = math.floor(p1z + 0.5)
-                if (0 <= ix < M.shape[0] and 0 <= iy < M.shape[1]
+                if (0 <= p1x < M.shape[0] and 0 <= p1y < M.shape[1]
+                        and 0 <= p1z < M.shape[2]
+                        and 0 <= ix < M.shape[0] and 0 <= iy < M.shape[1]
                         and 0 <= iz < M.shape[2]):
                     E[y, x] = M[ix, iy, iz]
             continue
-        count = math.ceil(span)
+        # Lecturer pseudocode: x1 is an integer with x1 <= d12.
+        # Do not append an extra fractional endpoint when span is non-integral.
+        count = math.floor(span)
         for j in range(count + 1):
-            offset = min(float(j), span)
+            offset = float(j)
             # Use one consistent half-up rule for both voxel and canvas indices.
             x = math.floor((max_width - span) / 2.0 + offset + 0.5)
             if not 0 <= x < width:
                 continue
             fraction = offset / span
-            ix = math.floor(p1x + fraction * dx + 0.5)
-            iy = math.floor(p1y + fraction * dy + 0.5)
-            iz = math.floor(p1z + fraction * dz + 0.5)
+            qx = p1x + fraction * dx
+            qy = p1y + fraction * dy
+            qz = p1z + fraction * dz
+            if not (0 <= qx < M.shape[0] and 0 <= qy < M.shape[1]
+                    and 0 <= qz < M.shape[2]):
+                continue
+            ix = math.floor(qx + 0.5)
+            iy = math.floor(qy + 0.5)
+            iz = math.floor(qz + 0.5)
             if (0 <= ix < M.shape[0] and 0 <= iy < M.shape[1]
                     and 0 <= iz < M.shape[2]):
                 E[y, x] = M[ix, iy, iz]
@@ -305,7 +318,7 @@ def test_projection():
             for z in range(3):
                 M[x, y, z] = 10 * x + 3 * y + z
     triangle = project_triangle(M, (0, 0, 0), (2, 0, 0), (0, 2, 0))
-    np.testing.assert_array_equal(triangle, np.array([[0, 10, 3, 0], [20, 13, 13, 6]], dtype=np.uint8))
+    np.testing.assert_array_equal(triangle, np.array([[0, 10, 3, 0], [20, 13, 13, 0]], dtype=np.uint8))
     rectangle = project_trapezoid(M, (0, 0, 0), (2, 0, 0), (0, 2, 0), (2, 2, 0))
     np.testing.assert_array_equal(rectangle, np.array([[10, 13, 16], [20, 23, 26]], dtype=np.uint8))
     assert sample_nearest(M, (-1, 0, 0)) == 0
