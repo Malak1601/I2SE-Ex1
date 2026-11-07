@@ -80,3 +80,44 @@ The MRI volume is used for visual demonstration, while small synthetic volumes a
 The synthetic performance benchmark measures projection computation separately from file loading and video encoding.
 
 The performance results therefore do not represent the complete time required to generate a video from an MRI file.
+## Additional Reference Datasets
+
+Two additional NRRD datasets were used to test the projection algorithm on different 3D volumes.
+
+| Dataset | Dimensions | Data Type | Reference CSV |
+|---|---|---|---|
+| Croissant | 500 × 500 × 500 | uint8 | `data/croissant_reference.csv` |
+| Onion | 256 × 256 × 130 | uint8 | `data/onion_reference.csv` |
+
+### Reference CSV Files
+
+The reference CSV files were obtained from the supplementary dataset folder provided for the assignment.
+
+- `croissant_reference.csv` contains 100 plane definitions.
+- `onion_reference.csv` contains 120 plane definitions.
+
+These files use the lecturer's CSV format, with a point-count column followed by 3D coordinates.
+
+### Additional Test CSV Files
+
+The project also includes manually created CSV files:
+
+- `data/croissant.csv` — three orthogonal rectangular planes.
+- `data/onion.csv` — three orthogonal rectangular planes.
+
+### Dataset Availability
+
+The original Croissant and Onion NRRD files were downloaded from the supplementary dataset folder.
+
+The large NRRD files are kept locally and are not included in the Git repository.
+
+To reproduce the experiments, download the corresponding NRRD files and place them inside the `data/` directory.
+
+The generated videos and CSV plane definitions are included in the repository.
+
+### Generated Results
+
+- [Croissant reference video](../results/croissant_reference.mp4)
+- [Onion reference video](../results/onion_reference.mp4)
+
+The experiment results are documented in [EXPERIMENT.md](EXPERIMENT.md).

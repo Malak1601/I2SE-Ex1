@@ -301,7 +301,68 @@ The resulting frames are saved as an MP4 video.
 [Experiment and Results](docs/EXPERIMENT.md)
 
 The experiment documentation includes the benchmark configuration, recorded performance results, testing information, and output description.
+### Additional Volume Experiments
 
+The projection algorithm was also tested on two additional NRRD datasets.
+
+| Dataset | Volume Dimensions | Data Type | Projections |
+|---|---|---|---|
+| Croissant | 500 × 500 × 500 | uint8 | 3 |
+| Onion | 256 × 256 × 130 | uint8 | 3 |
+
+For each dataset, three orthogonal rectangular planes were defined in a CSV file and processed by the same projection algorithm.
+
+All six projections were generated successfully, with nonzero voxel values in each output image.
+
+**Croissant results:**
+
+- [Original MP4](results/croissant.mp4)
+- [6-second preview](results/croissant_preview.mp4)
+- [Plane definitions](data/croissant.csv)
+
+**Onion results:**
+
+- [Original MP4](results/onion.mp4)
+- [6-second preview](results/onion_preview.mp4)
+- [Plane definitions](data/onion.csv)
+
+The original MP4 files contain one frame per CSV entry. The preview files repeat each frame for two seconds to make the results easier to inspect.
+
+The previews are for presentation only and do not change the projection algorithm or its output.
+
+### Additional Experiments: Croissant and Onion
+
+The algorithm was tested on two additional 3D NRRD datasets using the same implementation.
+
+| Dataset | Volume Size | Data Type | Reference CSV Entries |
+|---|---|---|---|
+| Croissant | 500 × 500 × 500 | uint8 | 100 |
+| Onion | 256 × 256 × 130 | uint8 | 120 |
+
+Two types of experiments were performed for each dataset:
+
+1. Three orthogonal plane projections generated using manually created CSV files.
+2. A sequence of projections generated using the reference CSV files provided with the datasets.
+
+The reference CSV experiments produced MP4 videos showing successive cross-sectional views of the volumes.
+
+#### Croissant
+
+- [Reference video — 100 projections](results/croissant_reference.mp4)
+- [Reference CSV](data/croissant_reference.csv)
+- [Three-plane experiment](results/croissant.mp4)
+- [Extended preview](results/croissant_preview.mp4)
+
+#### Onion
+
+- [Reference video — 120 plane definitions](results/onion_reference.mp4)
+- [Reference CSV](data/onion_reference.csv)
+- [Three-plane experiment](results/onion.mp4)
+- [Extended preview](results/onion_preview.mp4)
+
+The reference videos preserve the original sequence of CSV entries. The extended previews repeat the three-plane experiment frames for easier viewing.
+
+These experiments demonstrate that the same projection implementation can process different volumetric datasets and plane sequences.
 ## 11. Dataset
 
 The project uses two main types of data:
