@@ -2,9 +2,11 @@
 
 ## 1. Objective
 
-The purpose of this experiment is to evaluate the performance of the plane projection algorithm and demonstrate its ability to generate an MP4 video from a 3D NRRD volume and a CSV file containing plane coordinates.
+The purpose of this experiment is to evaluate the performance of the plane projection algorithm and demonstrate its ability to generate MP4 videos from 3D NRRD volumes and CSV files containing plane coordinates.
 
-The assignment requires a projection rate above 30 FPS, with approximately 100 FPS expected for a 500 × 500 × 500 volume.
+The assignment requires a minimum projection rate of 30 FPS, with approximately 100 FPS expected for a 500 × 500 × 500 volume.
+
+The experiments focus on computational performance, correctness, and the ability to process different datasets.
 
 ## 2. Implementation
 
@@ -12,12 +14,14 @@ The project is implemented in Python.
 
 The main libraries are:
 
-- **NumPy:** stores the 3D volume and projection matrices.
-- **pynrrd:** reads NRRD files.
-- **Numba:** accelerates the projection loop using JIT compilation.
-- **imageio and imageio-ffmpeg:** generate MP4 video files.
+- **NumPy:** Stores the 3D volume and projection matrices.
+- **pynrrd:** Reads NRRD files.
+- **Numba:** Accelerates the projection loop using JIT compilation.
+- **imageio and imageio-ffmpeg:** Generate MP4 video files.
 
-The projection uses nearest-neighbor sampling. Coordinates outside the volume produce zero-valued pixels.
+The projection algorithm uses nearest-neighbor sampling. Coordinates outside the volume produce zero-valued pixels.
+
+The implementation supports projections defined by isosceles triangles and isosceles trapezoids.
 
 ## 3. Performance Benchmark
 
@@ -46,18 +50,20 @@ The algorithm is then executed 10 times.
 | Volume dimensions | 500 × 500 × 500 |
 | Data type | uint8 |
 | Number of measured projections | 10 |
-| Average time per projection | 0.00103 seconds |
-| Projection rate | 972.22 FPS |
-| Minimum required rate | Above 30 FPS |
+| Average time per projection | 0.00189 seconds |
+| Projection rate | 530.43 FPS |
+| Minimum required rate | 30 FPS |
 | Expected rate | Approximately 100 FPS |
 
-The measured projection rate exceeds both the minimum requirement and the expected performance target for this benchmark.
+The latest benchmark achieved an average projection time of 0.00189 seconds, corresponding to 530.43 projection FPS.
 
-**Important:** This benchmark measures projection computation only. It does not include NRRD file loading, MP4 encoding, or the initial Numba compilation. The result depends on the computer and the selected plane geometry.
+This exceeds both the minimum required rate of 30 FPS and the expected target of approximately 100 FPS for the tested projection.
+
+**Important:** This benchmark measures projection computation only. It does not include NRRD file loading, MP4 encoding, or initial Numba JIT compilation. Performance may vary between runs, hardware configurations, and plane geometries.
 
 ## 4. Video Demonstration
 
-The project also generates MP4 videos from NRRD data and CSV plane definitions.
+The project generates MP4 videos from NRRD data and CSV plane definitions.
 
 The main command is:
 
@@ -67,17 +73,23 @@ python Ex0.py file.nrrd file.csv file.mp4
 
 The program processes the plane definitions in CSV order and generates the corresponding video frames.
 
-Valid planes produce grayscale projection images. Invalid plane definitions are handled by generating a marked error frame, allowing subsequent valid entries to be processed.
+Valid planes produce grayscale projection images. Invalid plane definitions are handled by generating marked error frames, allowing subsequent valid entries to be processed.
 
-### Output File
+### Generated Video Outputs
 
-The generated demonstration video is stored in:
+| Dataset | Video File | Frames | FPS | Duration |
+|---|---|---:|---:|---:|
+| MRI | `results/output (5).mp4` | 4 | 30 | Approximately 0.13 seconds |
+| Croissant | `results/croissant_reference.mp4` | 100 | 30 | 3.33 seconds |
+| Onion | `results/onion_reference.mp4` | 120 | 30 | 4.00 seconds |
 
-`results/output (5).mp4`
+The Croissant and Onion videos demonstrate the processing of longer sequences of plane definitions from CSV files.
 
-This file demonstrates the output of the projection pipeline using the MRI volume.
+The MRI video demonstrates a shorter four-plane sequence.
 
-## 5. Testing
+The number of frames corresponds to the number of processed plane definitions for these experiments.
+
+## 5. Automated Testing
 
 The project includes automated tests for:
 
@@ -91,26 +103,20 @@ The project includes automated tests for:
 The test suite was executed using:
 
 ```bash
-python -m pytest tests/ -v
+python -m pytest -q
 ```
 
-### Test Result
+### Test Results
 
-**45 tests passed in 6.89 seconds.**
+**45 tests passed in 14.84 seconds.**
 
-All tests in that execution completed successfully.
+All tests in this execution completed successfully.
 
-## 6. Conclusion
+Additional manual tests were performed using selected edge cases and synthetic NRRD volumes with uint8, uint16, and uint32 data types.
 
-The experiment demonstrates that the implemented algorithm can efficiently compute 2D projections from a 3D volume.
+Detailed test descriptions and results are documented in `docs/TESTING.md`.
 
-For the measured synthetic-volume benchmark, the implementation achieved **972.22 projection FPS**, exceeding the assignment's performance targets.
-
-The project also supports video generation from CSV-defined planes and includes automated tests for correctness, validation, and error handling.
-
-The performance result should be interpreted as a projection-only measurement rather than an end-to-end video-generation rate.
-
-## Additional Experiments: Croissant and Onion
+## 6. Additional Experiments: Croissant and Onion
 
 Two additional NRRD datasets were used to evaluate the projection algorithm on different 3D volumes.
 
@@ -124,7 +130,7 @@ Two additional NRRD datasets were used to evaluate the projection algorithm on d
 
 The program processed the 100 plane definitions and generated an MP4 video showing successive views of the croissant volume.
 
-The resulting video was visually inspected and the projections were clearly visible.
+The resulting video was visually inspected, and the projections were clearly visible.
 
 ### Onion Dataset
 
@@ -140,14 +146,16 @@ The video was visually inspected and showed clear successive views of the onion 
 
 ### Additional Three-Plane Tests
 
-For each dataset, three orthogonal rectangular planes were also generated to test different orientations.
+For each dataset, three orthogonal rectangular planes were generated to test different orientations.
 
 | Dataset | Number of Planes | Output |
 |---|---:|---|
 | Croissant | 3 | `results/croissant.mp4` |
 | Onion | 3 | `results/onion.mp4` |
 
-Separate preview videos were generated by repeating the three original frames for easier viewing. These previews do not change the projection results.
+Separate preview videos were generated by repeating the three original frames for easier viewing.
+
+These preview videos do not represent additional projection computations.
 
 ### Observations
 
@@ -156,3 +164,15 @@ The experiments demonstrate that the same implementation can generate projection
 The reference CSV files provide longer projection sequences than the manually created three-plane examples.
 
 The experiments also demonstrate the ability to process volumes of different dimensions without modifying the projection algorithm.
+
+## 7. Conclusion
+
+The experiments demonstrate that the implemented algorithm can efficiently compute 2D projections from 3D volumes.
+
+For the latest synthetic-volume benchmark, the implementation achieved **530.43 projection FPS**, exceeding the assignment's minimum and expected performance targets for projection computation.
+
+Additional experiments using MRI, Croissant, and Onion datasets demonstrated video generation from different volume dimensions and plane sequences.
+
+The project includes automated tests for correctness, geometry validation, input handling, and video generation.
+
+The performance benchmark measures projection computation only and should not be interpreted as an end-to-end MP4 generation rate.
